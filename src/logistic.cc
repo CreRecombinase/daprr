@@ -13,7 +13,7 @@ using namespace Eigen;
 
 // I need to bundle all the data that goes to the function to optimze together. 
 typedef struct{
-  Map<SparseMatrix<double>>X;
+  SparseMatrix<double>&X;
 
   Map<VectorXi> y;
   double lambdaL1;
@@ -22,7 +22,7 @@ typedef struct{
 
 
 double fLogit_cat(Map<VectorXd> beta,
-                  Map<SparseMatrix<double>> X,
+                  SparseMatrix<double> & X,
                   Map<VectorXd> y,
                   double lambdaL1,
                   double lambdaL2)
@@ -96,58 +96,51 @@ wgsl_cat_optim_df (const Map<VectorXd>beta, void *params,
   auto np1 =	beta.size()-1;
   /* Changed loop start at 1 instead of 0 to avoid regularization of beta 0 */
   out.tail(np1)=p->lambdaL2*beta.tail(np1);
-  // for(int i = 1; i < npar; ++i)
-  //   out[i]=
-  out.tail(np1) = p->lambdaL1*((beta[i]>0)-(beta[i]<0));
+
   for(int i = 1; i < npar; ++i)
     out[i]+= p->lambdaL1*((beta[i]>0)-(beta[i]<0));
   
-  for(int i = 0; i < n; ++i) {
-    double pn=0;
-    double Xbetai=beta[0];
-    int iParm=1;
-    for(int k = 0; k < K; ++k) {
-      if(gsl_matrix_int_get(p->X,i,k)>0)
-	Xbetai+=beta[gsl_matrix_int_get(p->X,i,k)-1+iParm];
-      iParm+=p->nlev[k]-1;
-    }
-    //    total += y[i]*Xbetai-log(1+gsl_sf_exp(Xbetai));
-    pn= -( p->y[i] - 1/(1 + gsl_sf_exp(-Xbetai)) );
-
-    out[0]+= pn;
-    iParm=1;
-    for(int k = 0; k < K; ++k) {
-      if(gsl_matrix_int_get(p->X,i,k)>0)
-	out[gsl_matrix_int_get(p->X,i,k)-1+iParm]+=pn;
-      iParm+=p->nlev[k]-1;
-    }
+  double pn = (-(p->y.array()-1/(1+ (-p->X.transpose()*beta).array().exp()))).sum();
+  out[0]+=pn;
+ 
+  for (int k=0; k<(p->X.outerSize()); ++k)
+  for (SparseMatrix<double>::InnerIterator it(p->X,k); it; ++it)
+  {
+    out[1+it.col()]+=pn;
   }
+  
 }
 
 
 /* The Hessian of f */
 void 
 wgsl_cat_optim_hessian (const Map<VectorXd>beta, void *params,
-			gsl_matrix *out)
+			Map<MatrixXd> out)
 {
   fix_parm_cat_T *p = (fix_parm_cat_T *)params;
-  int n = p->y->size; 
+  int n = p->y.size(); 
   int K = p->X.cols();
   int npar = beta.size();
   // Intitialize Hessian out necessary ???
-  gsl_matrix_set_zero(out);
+  out.setZero();
+  
   /* Changed loop start at 1 instead of 0 to avoid regularization of beta 0*/
   for(int i = 1; i < npar; ++i)
-    gsl_matrix_set(out,i,i,(p->lambdaL2));  // Double check this
+    out(i,i)=p->lambdaL2;
   // L1 penalty not working yet, as not differentiable, I may need to do coordinate descent (as in glm_net)
 
-  
+
+
+  Eigen::VectorXd Xb = p->X.transpose()*beta.tail(npar-1);
   for(int i = 0; i < n; ++i) {
     double pn=0;
     double aux=0;
     double Xbetai=beta[0];
     int iParm2=1;
     int iParm1=1;
+
+
+
     for(int k = 0; k < K; ++k) {
       if(gsl_matrix_int_get(p->X,i,k)>0)
 	Xbetai+=beta[gsl_matrix_int_get(p->X,i,k)-1+iParm1];

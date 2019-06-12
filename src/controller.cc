@@ -461,8 +461,6 @@ double controller::fine_optimize_beta(int index, double est, double null_log10_l
 double controller::eval_likelihood(double x, int index){
 
   beta_vec[index]=x;
-
-
   if(kd!=0){
     logistic_cat_pred(beta_vec, Xd, prior_vec);
   }
@@ -472,7 +470,6 @@ double controller::eval_likelihood(double x, int index){
     locVec[k].EM_update();
     log10_lik += locVec[k].log10_lik;
   }
-  
   return log10_lik;
 }
 
