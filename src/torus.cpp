@@ -1,8 +1,9 @@
-#include <RcppGSL.h>
+#define EIGEN_PERMANENTLY_DISABLE_STUPID_WARNINGS
 #include "classdef.h"
+#include <Eigen/src/Core/util/DisableStupidWarnings.h>
 #include <gsl/gsl_multifit.h>
 #include <cmath>
-
+//[[Rcpp::depends(RcppEigen)]]
 using	loc_it = Rcpp::IntegerVector::iterator;
 
 
@@ -17,7 +18,7 @@ using	loc_it = Rcpp::IntegerVector::iterator;
 
 
 // [[Rcpp::export]]
-Rcpp::List torus(Rcpp::IntegerVector locus_id, Rcpp::NumericVector z_hat,RcppGSL::matrix<int> anno_mat,Rcpp::StringVector names,const bool prior=false){
+Rcpp::List torus(Rcpp::IntegerVector locus_id, Rcpp::NumericVector z_hat,Eigen::Map<Eigen::SparseMatrix<double> > anno_mat,Rcpp::StringVector names,const bool prior=false){
 
 
     double EM_thresh = 0.05;
@@ -25,18 +26,18 @@ Rcpp::List torus(Rcpp::IntegerVector locus_id, Rcpp::NumericVector z_hat,RcppGSL
     int print_avg = 0;
     auto split = make_splitter(locus_id.begin(),locus_id.end());
     Result_obj res(locus_id.size(),anno_mat.ncol()+1);
-    controller con(split,res);
+    controller con(split,res,anno_mat);
     con.EM_thresh = EM_thresh;
     con.init_pi1 = init_pi1;
     con.print_avg = print_avg;
     con.load_data_R(z_hat);
-    con.load_annotations_R(anno_mat,Rcpp::as<std::vector<std::string>>(names));
+    con.load_annotations_R(Rcpp::as<std::vector<std::string>>(names));
     auto result = con.estimate();
     if(!prior){
         return result;
     }else{
         using namespace Rcpp;
-        return (Rcpp::List::create(_["prior"]=res.prior,_["est"]=result));           
+        return (Rcpp::List::create(_["prior"]=res.r_prior,_["est"]=result));           
     }
 }
 

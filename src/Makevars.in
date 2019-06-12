@@ -1,0 +1,6 @@
+# set by configure
+CXX_STD = CXX17
+
+# combine with standard arguments for R
+PKG_CPPFLAGS = -g $(GSL_CFLAGS) -I../inst/include -DEIGEN_PERMANENTLY_DISABLE_STUPID_WARNINGS=1
+

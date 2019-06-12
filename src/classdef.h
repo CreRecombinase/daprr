@@ -1,18 +1,17 @@
 #ifndef __CLASSDEF_H_
 #define __CLASSDEF_H_
-
-#include <RcppGSL.h>
+#ifndef EIGEN_PERMANENTLY_DISABLE_STUPID_WARNINGS
+#define EIGEN_PERMANENTLY_DISABLE_STUPID_WARNINGS
+#endif
+#include <RcppEigen.h>
 #include <stdlib.h>
 #include <string>
 #include <string.h>
 #include <vector>
 #include <map>
 #include <unordered_map>
-#include "gsl/span"
 
 
-#include <gsl/gsl_vector.h>
-#include <gsl/gsl_matrix.h>
 
 
 using namespace std;
@@ -51,9 +50,7 @@ class Locus {
   int id;
   
   vector<SNP> snpVec;
-  
-  gsl_vector *prior_vec;
-  gsl_vector *pip_vec;
+
 
 
   
@@ -61,44 +58,16 @@ class Locus {
   
   double fdr;
 
-  gsl::span<const double> BF_sp;
-  gsl::span<double> prior_sp;
-  gsl::span<double> pip_sp;
+  Eigen::Map<Eigen::ArrayXd> BF_sp;
+  Eigen::Map<Eigen::ArrayXd> prior_sp;
+  Eigen::Map<Eigen::ArrayXd> pip_sp;
 
 
-  Locus(int locus_id,  gsl::span<const double> BFv,gsl::span<double> pv,gsl::span<double> pipv):id(locus_id),
-												BF_sp(BFv),
-												prior_sp(pv),
-												pip_sp(pipv){}
+  Locus(int locus_id,  Eigen::Map<Eigen::ArrayXd> BFv,Eigen::Map<Eigen::ArrayXd> pv,Eigen::Map<Eigen::ArrayXd> pipv):id(locus_id),
+														     BF_sp(BFv),
+														     prior_sp(pv),
+														     pip_sp(pipv){}
 
-
-    // BF_vec(snpVec.size()+1),
-    // min_index(std::numeric_limits<int>::max()),
-    // max_index(std::numeric_limits<int>::min()){
-
-
-    // std::transform(snpVec.begin(),snpVec.end(),BF_vec.begin(),[&min_index,&max_index](const SNP& snp){
-    // 								min_index = snp.index < min_index ? snp.index : min_index;
-    // 								max_index = snp.index > max_index ? snp.index : max_index;
-    // 								return snp.log10_BF;
-    // 							      });
-
-  
-  
-  // Locus(int locus_id,  vector<SNP>  snpVec_):id(locus_id),
-  // 					     snpVec(snpVec_),
-  // 					     prior_vec(nullptr)
-  // 					     pip_vec(nullptr),p_vec(snpVec.size()+1,0.0),
-  //   BF_vec(snpVec.size()+1),
-  //   min_index(std::numeric_limits<int>::max()),
-  //   max_index(std::numeric_limits<int>::min()){
-
-
-  //   std::transform(snpVec.begin(),snpVec.end(),BF_vec.begin(),[&min_index,&max_index](const SNP& snp){
-  // 								min_index = snp.index < min_index ? snp.index : min_index;
-  // 								max_index = snp.index > max_index ? snp.index : max_index;
-  // 								return snp.log10_BF;
-  // 							      });
 
 
 
@@ -108,7 +77,6 @@ class Locus {
 
   // }
 
-  Locus(){};
 
   
   //  void EM_update();
@@ -127,11 +95,10 @@ class splitter{
   std::vector<size_t> ret_v;
 public:
   splitter(std::vector<size_t> &&ret_v_):ret_v(ret_v_){}
-  gsl::span<double> split_range(double* data_pt,int idx)const {
+  Eigen::Map<Eigen::ArrayXd> split_range(double* data_pt,int idx)const {
     int beg=ret_v[idx];
-    int end_s=ret_v[idx+1];
     int	ret_s =	ret_v[idx+1]-ret_v[idx];
-    return(gsl::span<double>(data_pt+beg,ret_s));
+    return(Eigen::Map<Eigen::ArrayXd>(data_pt+beg,ret_s));
   }
   const int num_regions()const {
     return(static_cast<int>(ret_v.size()-1));
@@ -153,36 +120,50 @@ splitter make_splitter(T v_begin, T v_end){
 }
 
 class Result_obj{
+  
+
+  
 
 public:
-  RcppGSL::vector<double> beta;
-  RcppGSL::vector<double> pip;
-  RcppGSL::vector<double> prior;
-  RcppGSL::vector<double> o_prior;
-  RcppGSL::vector<double> o_beta;
+    Rcpp::NumericVector r_beta;  
+  Rcpp::NumericVector r_pip;
+  Rcpp::NumericVector r_prior;
+  Rcpp::NumericVector r_o_prior;
+  Rcpp::NumericVector r_o_beta;
+  
+  Eigen::Map<Eigen::VectorXd> beta;
+  Eigen::Map<Eigen::VectorXd> pip;
+  Eigen::Map<Eigen::VectorXd> prior;
+  Eigen::Map<Eigen::VectorXd> o_prior;
+  Eigen::Map<Eigen::VectorXd> o_beta;
 
 
   Result_obj(const size_t	p,const size_t k):
-    beta(k),
-    pip(p),
-    prior(p),
-    o_prior(p),
-    o_beta(k){}
+        r_beta(k),  
+    r_pip(p),
+    r_prior(p),
+    r_o_prior(p),
+    r_o_beta(k),
+    beta(Rcpp::as<Eigen::Map<Eigen::VectorXd> >(r_beta)),
+    pip(Rcpp::as<Eigen::Map<Eigen::VectorXd> >(r_pip)),
+    prior(Rcpp::as<Eigen::Map<Eigen::VectorXd> >(r_prior)),
+    o_prior(Rcpp::as<Eigen::Map<Eigen::VectorXd> >(r_o_prior)),
+    o_beta(Rcpp::as<Eigen::Map<Eigen::VectorXd> >(r_o_beta)){}
 
 
-  gsl_vector *saved_beta_vec(){
+  Eigen::Map<Eigen::VectorXd>saved_beta_vec(){
     return o_beta;// = gsl_vector_calloc(ncoef);
   }
-  gsl_vector *saved_prior_vec(){
+  Eigen::Map<Eigen::VectorXd>saved_prior_vec(){
     return o_prior;// = gsl_vector_calloc(p);
   }
-  gsl_vector *prior_vec(){
+  Eigen::Map<Eigen::VectorXd>prior_vec(){
     return prior;
   }
-  gsl_vector *pip_vec(){
+  Eigen::Map<Eigen::VectorXd>pip_vec(){
     return pip;
   }
-  gsl_vector *beta_vec(){
+  Eigen::Map<Eigen::VectorXd>beta_vec(){
     return beta;
   }
 };
@@ -194,12 +175,13 @@ class controller {
 public:
 
 
-  controller(const splitter &split_,Result_obj &obj):split(split_),
-						     saved_beta_vec(obj.saved_beta_vec()),
-						     saved_prior_vec(obj.saved_prior_vec()),
-						     prior_vec(obj.prior_vec()),
-						     pip_vec(obj.pip_vec()),
-						     beta_vec(obj.beta_vec())
+  controller(const splitter &split_,Result_obj &obj,Eigen::Map<Eigen::SparseMatrix<double>> Xd_):split(split_),
+						     saved_beta_vec(Rcpp::as<Eigen::Map<Eigen::VectorXd> >(obj.r_o_beta)),
+						     saved_prior_vec(Rcpp::as<Eigen::Map<Eigen::VectorXd> >(obj.r_o_prior)),
+						     prior_vec(Rcpp::as<Eigen::Map<Eigen::VectorXd> >(obj.r_prior)),
+						     pip_vec(Rcpp::as<Eigen::Map<Eigen::VectorXd> >(obj.r_pip)),
+						     beta_vec(Rcpp::as<Eigen::Map<Eigen::VectorXd> >(obj.r_beta)),
+						     Xd(Xd_)
   {
     p=kd= 0;
     force_logistic = 0;
@@ -211,11 +193,11 @@ public:
   }
 
 
-  gsl_vector *saved_beta_vec;// = gsl_vector_calloc(ncoef);
-  gsl_vector *saved_prior_vec;// = gsl_vector_calloc(p);
-  gsl_vector *prior_vec;
-  gsl_vector *pip_vec;
-  gsl_vector *beta_vec;
+  Eigen::Map<Eigen::VectorXd>saved_beta_vec;// = gsl_vector_calloc(ncoef);
+  Eigen::Map<Eigen::VectorXd>saved_prior_vec;// = gsl_vector_calloc(p);
+  Eigen::Map<Eigen::VectorXd>prior_vec;
+  Eigen::Map<Eigen::VectorXd>pip_vec;
+  Eigen::Map<Eigen::VectorXd>beta_vec;
 
 
   // storage
@@ -227,7 +209,7 @@ public:
   //  int kc; // number of continuous covariate
   int kd; // number of discrete covariate
 
-  std::vector<double> log10_BF;
+  Eigen::VectorXd log10_BF;
 
   std::vector<double> estvec;
   std::vector<double> low_vec;
@@ -235,17 +217,13 @@ public:
   std::vector<std::string> name_vec;
 
   vector<string> dvar_name_vec;
-
+  Eigen::SparseMatrix<double> Xd;
 
   
   //  gsl_vector_int *dist_bin;
   double EM_thresh;
   
-  gsl_vector_int *dlevel; // (kd+1) entry levels of each factor
 
-
-  gsl_matrix *Xc;  // p x kc
-  gsl_matrix_int *Xd; // p x kd
 
 
   
@@ -272,7 +250,7 @@ public:
   // void load_data_fastqtl(char *filename); //load data with fastQTL format
   // void torus_d(Rcpp::IntegerVector locus_id, Rcpp::NumericVector z_hat, Rcpp::IntegerMatrix anno_mat);
   void load_data_R(Rcpp::NumericVector z_hat);
-  void load_annotations_R(RcppGSL::matrix<int> anno_mat ,std::vector<std::string> names);
+  void load_annotations_R(std::vector<std::string> names);
 
   // void load_map(char *gene_map_file, char *snp_map_file);
   // void load_annotation(char *annot_file);
@@ -291,10 +269,6 @@ public:
     
   void run_EM();
 
-
-
-  
-  void find_eGene(double thresh=0.05);
   Rcpp::DataFrame estimate();
   //  void dump_prior(char *path);
   //  double dump_locus_prior(const Locus& loc,fs::path file);
