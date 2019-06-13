@@ -11,7 +11,6 @@
 #include <boost/config/warning_disable.hpp>
 #include "logistic.h"
 #include <wordexp.h>
-#include "parser.hpp"
 #include <sys/types.h>
 #include <errno.h>
 
@@ -152,12 +151,6 @@ void controller::run_EM(){
 
     last_log10_lik = curr_log10_lik;
   }
-  
-  
-  double tp = prior_vec.sum();
-  // for(int i=0;i<p;i++){
-  //   tp += gsl_vector_get(prior_vec,i);
-  // }
   
 }
 
@@ -478,15 +471,14 @@ void Locus::EM_update(){
     // compute log10_lik
 
   double locus_pi0=1;
-  prior_sp=prior_sp.array()/(1-prior_sp.array());
   locus_pi0=(1-prior_sp.array()).prod()*locus_pi0;
-
+  prior_v=prior_sp.array()/(1-prior_sp.array());
 
   if(locus_pi0 < 1e-100){
     locus_pi0 = 1e-100;
   }
 
-  prior_sp*=locus_pi0;
+  prior_v*=locus_pi0;
 
 
   double max_el = BF_sp.maxCoeff();
@@ -501,6 +493,7 @@ void Locus::EM_update(){
   prior_sp=Eigen::pow(10,(Eigen::log10(prior_sp)+BF_sp-log10_lik));
 
 }
+
 
 
 
@@ -566,7 +559,18 @@ void Locus::compute_fdr(){
 // }
 
 
+double log10_weighted_sum(const Eigen::Map<Eigen::ArrayXd> &BF_sp, const Eigen::ArrayXd  &prior_v,const double locus_pi0,const double BF0=0){
 
+
+  double max_el = BF_sp.maxCoeff();
+
+  max_el = std::max(max_el,0.0);
+
+  double sum = locus_pi0*pow(10,0-max_el);
+  double  log10_lik = sum+BF_sp.matrix().dot(Eigen::pow(10,prior_v-max_el).matrix());
+  log10_lik=max_el+log10(log10_lik);
+  return log10_lik;
+}
 
 
 

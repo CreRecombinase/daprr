@@ -60,12 +60,14 @@ class Locus {
 
   Eigen::Map<Eigen::ArrayXd> BF_sp;
   Eigen::Map<Eigen::ArrayXd> prior_sp;
+  Eigen::ArrayXd prior_v;
   Eigen::Map<Eigen::ArrayXd> pip_sp;
 
 
   Locus(int locus_id,  Eigen::Map<Eigen::ArrayXd> BFv,Eigen::Map<Eigen::ArrayXd> pv,Eigen::Map<Eigen::ArrayXd> pipv):id(locus_id),
 														     BF_sp(BFv),
 														     prior_sp(pv),
+														     prior_v(prior_sp),
 														     pip_sp(pipv){}
 
 
