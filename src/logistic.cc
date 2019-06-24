@@ -5,7 +5,7 @@
 #include <gsl/gsl_multimin.h>
 #include <gsl/gsl_sf.h>
 #include <gsl/gsl_linalg.h>
-#include "logistic.h"
+#include "logistic.hpp"
 
 // I need to bundle all the data that goes to the function to optimze together. 
 typedef struct{
@@ -234,10 +234,11 @@ int logistic_mixed_fit(gsl_vector *beta
   p.lambdaL2=lambdaL2;
   
   //Initial fit
-  //#ifdef _RPR_DEBUG_
+
   mLogLik = wgsl_mixed_optim_f(beta,&p);
-  //fprintf(stderr,"#Initial -log(Lik(0))=%lf\n",mLogLik);
-  //#endif //_RPR_DEBUG
+#ifdef _RPR_DEBUG_
+  fprintf(stderr,"#Initial -log(Lik(0))=%lf\n",mLogLik);
+#endif //_RPR_DEBUG
 
   gsl_matrix *myH = gsl_matrix_alloc(npar,npar); /* Hessian matrix*/
   gsl_vector *stBeta = gsl_vector_alloc(npar); /* Direction to move */
@@ -259,8 +260,8 @@ int logistic_mixed_fit(gsl_vector *beta
 	maxchange=fabs(stBeta->data[i]);
 
 #ifdef _RPR_DEBUG_
-    //mLogLik = wgsl_mixed_optim_f(beta,&p);
-    //fprintf(stderr,"#iter %d, -log(Lik(0))=%lf,%lf\n",(int)iter,mLogLik,maxchange);
+    //    mLogLik = wgsl_mixed_optim_f(beta,&p);
+    fprintf(stderr,"#iter %d, -log(Lik(0))=%lf,%lf\n",(int)iter,mLogLik,maxchange);
 #endif //_RPR_DEBUG
 
     if(maxchange<1E-4)
@@ -268,8 +269,8 @@ int logistic_mixed_fit(gsl_vector *beta
   }
 
 #ifdef _RPR_DEBUG_
-  //for (int i = 0; i < npar; i++)
-  //  fprintf(stderr,"#par_%d= %lf\n",i,beta->data[i]);
+  for (int i = 0; i < npar; i++)
+    fprintf(stderr,"#par_%d= %lf\n",i,beta->data[i]);
 #endif //_RPR_DEBUG
 
   //Final fit
@@ -493,10 +494,11 @@ int logistic_cat_fit(gsl_vector *beta
   p.lambdaL2=lambdaL2;
   
   //Initial fit
-  //#ifdef _RPR_DEBUG_
+
   mLogLik = wgsl_cat_optim_f(beta,&p);
-  //fprintf(stderr,"#Initial -log(Lik(0))=%lf\n",mLogLik);
-  //#endif //_RPR_DEBUG
+#ifdef _RPR_DEBUG_
+  fprintf(stderr,"#Initial -log(Lik(0))=%lf\n",mLogLik);
+#endif //_RPR_DEBUG
 
   gsl_matrix *myH = gsl_matrix_alloc(npar,npar); /* Hessian matrix*/
   gsl_vector *stBeta = gsl_vector_alloc(npar); /* Direction to move */
@@ -517,18 +519,18 @@ int logistic_cat_fit(gsl_vector *beta
       if(maxchange<fabs(stBeta->data[i]))
 	maxchange=fabs(stBeta->data[i]);
 
-#ifdef _RPR_DEBUG_
-    mLogLik = wgsl_cat_optim_f(beta,&p);
-    //fprintf(stderr,"#iter %d, -log(Lik(0))=%lf,%lf\n",(int)iter,mLogLik,maxchange);
-#endif //_RPR_DEBUG
+// #ifdef _RPR_DEBUG_
+//     mLogLik = wgsl_cat_optim_f(beta,&p);
+//     fprintf(stderr,"#iter %d, -log(Lik(0))=%lf,%lf\n",(int)iter,mLogLik,maxchange);
+// #endif //_RPR_DEBUG
 
     if(maxchange<1E-4)
       break;
   }
 
 #ifdef _RPR_DEBUG_
-  //for (int i = 0; i < npar; i++)
-  //  fprintf(stderr,"#par_%d= %lf\n",i,beta->data[i]);
+  for (int i = 0; i < npar; i++)
+   fprintf(stderr,"#par_%d= %lf\n",i,beta->data[i]);
 #endif //_RPR_DEBUG
 
   //Final fit
@@ -727,10 +729,11 @@ int logistic_cont_fit(gsl_vector *beta
   p.lambdaL2=lambdaL2;
   
   //Initial fit
-  //#ifdef _RPR_DEBUG_
+
   mLogLik = wgsl_cont_optim_f(beta,&p);
-  //fprintf(stderr,"#Initial -log(Lik(0))=%lf\n",mLogLik);
-  //#endif //_RPR_DEBUG
+  #ifdef _RPR_DEBUG_
+  fprintf(stderr,"#Initial -log(Lik(0))=%lf\n",mLogLik);
+  #endif //_RPR_DEBUG
 
   gsl_matrix *myH = gsl_matrix_alloc(npar,npar); /* Hessian matrix*/
   gsl_vector *stBeta = gsl_vector_alloc(npar); /* Direction to move */
@@ -761,8 +764,8 @@ int logistic_cont_fit(gsl_vector *beta
   }
 
 #ifdef _RPR_DEBUG_
-  //for (int i = 0; i < npar; i++)
-  //  fprintf(stderr,"#par_%d= %lf\n",i,beta->data[i]);
+  for (int i = 0; i < npar; i++)
+   fprintf(stderr,"#par_%d= %lf\n",i,beta->data[i]);
 #endif //_RPR_DEBUG
 
   //Final fit

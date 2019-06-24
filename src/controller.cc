@@ -1,4 +1,4 @@
-#include "classdef.h"
+#include "classdef.hpp"
 #include <iostream>
 #include <fstream>
 #include <sstream>
@@ -8,7 +8,6 @@
 #include <gsl/gsl_rng.h>
 #include <gsl/gsl_randist.h>
 
-//#include <omp.h>
 #include <boost/config/warning_disable.hpp>
 #include "logistic.h"
 #include <wordexp.h>
@@ -23,6 +22,7 @@ class BF{
   std::array<double,4> kva;
   std::array<double,4> kvb;
   mutable std::array<double,4> kvc;
+
 public:
   BF():wt(1/4.0),l10(log(10)){
     kv={1,4,16,25};
@@ -161,13 +161,11 @@ void controller::load_data_R(Rcpp::NumericVector z_hat){
 
 void controller::load_annotations_R(RcppGSL::matrix<int> anno_mat,std::vector<std::string> names){
 
-  unordered_map<int, vector<double> > annot_map;
 
-  map<int, int> col2cat;
-  map<int, int> col2cpos;
-  map<int, int> col2dpos;
   kd = anno_mat.ncol();
-
+  if(anno_mat.ncol()!=names.size()){
+    Rcpp::stop("names and anno_mat do not match in size:"+std::to_string(kd)+" vs "+std::to_string(names.size()));
+  }
   dvar_name_vec=names;
   Xd =  anno_mat;
   dlevel = gsl_vector_int_calloc(kd);
@@ -182,7 +180,7 @@ void controller::load_annotations_R(RcppGSL::matrix<int> anno_mat,std::vector<st
 
 int controller::count_factor_level(int col){
  
-  map<int, int> rcd;
+  std::unordered_map<int, int> rcd;
   for(int i=0;i<p;i++){
     int val = gsl_matrix_int_get(Xd,i,col);
     rcd[val] = 1;
@@ -241,18 +239,36 @@ void controller::run_EM(){
                
     }
     if(ncoef==1){
+      if(verbose){
+	Rcpp::Rcerr<<"simple"<<std::endl;
+      }
       simple_regression();
     }
     // only categrical annotations
     else if(kd!=0){
       if(kd == 1 && !force_logistic){
+	if(verbose){
+	  Rcpp::Rcerr<<"single_ct"<<std::endl;
+	}
 	single_ct_regression();
       }else{
+	if(verbose){
+	  Rcpp::Rcerr<<"cat_fit"<<std::endl;
+	}
 	logistic_cat_fit(beta_vec, Xd, dlevel,pip_vec, l1_lambda,l2_lambda);
       }
-      
+      if(verbose){
+	Rcpp::Rcerr<<"cat_pred"<<std::endl;
+	Rcpp::Rcerr<<"beta:\n";
+	gsl::span<double> beta_sp(beta_vec->data,beta_vec->size);
+	for(auto be : beta_sp){
+	  Rcpp::Rcerr<<be<<"\n";
+	}
+	Rcpp::Rcerr<<std::endl;
+      }
       logistic_cat_pred(beta_vec, Xd, dlevel,prior_vec);
     }
+
 
     if(fabs(curr_log10_lik-last_log10_lik)<EM_thresh){
       final_log10_lik = curr_log10_lik;
@@ -333,8 +349,8 @@ void controller::single_probt_est(){
 
 void controller::single_ct_regression(){
  
-  map<int,double> sum_pip;
-  map<int,double> sum;
+  std::unordered_map<int,double> sum_pip;
+  std::unordered_map<int,double> sum;
   
   int levels = gsl_vector_int_get(dlevel,0);
   // std::cerr<<"levels:"<<levels<<std::endl;
@@ -441,12 +457,12 @@ Rcpp::DataFrame controller::estimate(){
   for(int i=0;i<dvar_name_vec.size();i++){
     
     int level = gsl_vector_int_get(dlevel,i);
-    string prefix = dvar_name_vec[i];
+    std::string prefix = dvar_name_vec[i];
     //    name_vec.push_back(prefix);
     for(int j=1;j<level;j++){
-      ostringstream stream;
+      std::ostringstream stream;
       stream <<prefix<<"."<<j;
-      string label = stream.str();
+      std::string label = stream.str();
       double est = gsl_vector_get(beta_vec, index);
       gsl_vector_set(beta_vec,index, 0.0);
 
@@ -498,12 +514,13 @@ Rcpp::DataFrame controller::estimate(){
   gsl_vector_free(saved_beta_vec);
   gsl_vector_free(saved_prior_vec);
 
-
+  Rcpp::NumericVector lik(name_vec.size(),final_log10_lik);
   using namespace Rcpp;
   auto ret = Rcpp::DataFrame::create(_["term"]=Rcpp::wrap(name_vec),
 				     _["estimate"]=Rcpp::wrap(estvec),
 				     _["high"]=Rcpp::wrap(high_vec),
-				     _["low"]=Rcpp::wrap(low_vec));
+				     _["low"]=Rcpp::wrap(low_vec),
+				     _["lik"]=final_log10_lik);
   return ret;
 
 }
@@ -601,18 +618,37 @@ void Locus::EM_update(){
     // compute log10_lik
 
   double locus_pi0=1;
+  if(verbose){
+    Rcpp::Rcerr<<"id: "<<id<<"\nold prior: \n";
+    int ik=0;
+    for( auto av : prior_sp){
+      if(ik++>10){
+	break;
+      }
+      Rcpp::Rcerr<<av<<"\n";
+
+    }
+    Rcpp::Rcerr<<std::endl;
+  }
+
+
   std::transform(prior_sp.begin(),prior_sp.end(),prior_sp.begin(),[&locus_pi0](double prior){
 								     locus_pi0*=(1-prior);
 								     return(prior/(1-prior));
 								  });
 
-  // for(int i=0;i<snpVec.size();i++){
-  //   double prior = gsl_vector_get(prior_vec, snpVec[i].index);
-  //   BF_vec.push_back(snpVec[i].log10_BF);
-  //   p_vec.push_back(prior/(1-prior));
-  //   locus_pi0 *= (1-prior);
-  // }
-  //  std::cerr<<"int locus: "<<id<<"\npi0:"<<locus_pi0<<std::endl;
+  if(verbose){
+    Rcpp::Rcerr<<"new prior: \n";
+    int ik=0;
+    for( auto av : prior_sp){
+      if(ik++>10){
+	break;
+      }
+      Rcpp::Rcerr<<av<<"\n";
+    }
+    Rcpp::Rcerr<<"locus_pi0: "<<locus_pi0<<std::endl;
+  }
+
 
   if(locus_pi0 < 1e-100){
     locus_pi0 = 1e-100;
@@ -654,6 +690,17 @@ void Locus::EM_update(){
 		   return pow(10,(log10(prior) + log10_BF - ll));
 
 		 });
+  if(verbose){
+    Rcpp::Rcerr<<"new pip: \n";
+    int ik=0;
+    for( auto av : pip_sp){
+      if(ik++>10){
+	break;
+      }
+      Rcpp::Rcerr<<av<<"\n";
+    }
+    Rcpp::Rcerr<<"log10_lik: "<<log10_lik<<std::endl;
+  }
 
 
 
@@ -789,7 +836,7 @@ void Locus::compute_fdr(){
 
 
 
-double log10_weighted_sum(vector<double> &vec, vector<double> &wts){
+double log10_weighted_sum(std::vector<double> &vec, std::vector<double> &wts){
 
 
   double max = vec[0];

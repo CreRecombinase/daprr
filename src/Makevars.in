@@ -1,0 +1,8 @@
+# set by configure
+CXX_STD = CXX17
+GSL_CFLAGS = @GSL_CFLAGS@
+GSL_LIBS   = @GSL_LIBS@
+
+# combine with standard arguments for R
+PKG_CPPFLAGS = -g $(GSL_CFLAGS) -I../inst/include
+PKG_LIBS = $(GSL_LIBS) 

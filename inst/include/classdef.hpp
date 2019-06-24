@@ -14,8 +14,8 @@
 #include <gsl/gsl_vector.h>
 #include <gsl/gsl_matrix.h>
 
+extern bool verbose;
 
-using namespace std;
 
 
 
@@ -33,9 +33,6 @@ class SNP {
     // log10_BF = snp_log10_BF;
     // index = snp_index;
   }
- 
-    
- 
 };
 
 
@@ -50,7 +47,7 @@ class Locus {
   // possible gene information/annotation
   int id;
   
-  vector<SNP> snpVec;
+  std::vector<SNP> snpVec;
   
   gsl_vector *prior_vec;
   gsl_vector *pip_vec;
@@ -85,7 +82,7 @@ class Locus {
 
   
   
-  // Locus(int locus_id,  vector<SNP>  snpVec_):id(locus_id),
+  // Locus(int locus_id,  std::vector<SNP>  snpVec_):id(locus_id),
   // 					     snpVec(snpVec_),
   // 					     prior_vec(nullptr)
   // 					     pip_vec(nullptr),p_vec(snpVec.size()+1,0.0),
@@ -191,6 +188,7 @@ public:
 
 class controller {
   const splitter &split;
+  
 public:
 
 
@@ -219,7 +217,7 @@ public:
 
 
   // storage
-  vector<Locus> locVec;
+  std::vector<Locus> locVec;
   
   
   int p; // number of loc-SNP pairs
@@ -234,7 +232,7 @@ public:
   std::vector<double> high_vec;
   std::vector<std::string> name_vec;
 
-  vector<string> dvar_name_vec;
+  std::vector<std::string> dvar_name_vec;
 
 
   
@@ -313,7 +311,7 @@ public:
 
 
 
-double log10_weighted_sum(vector<double> & val_vec, vector<double> & wts_vec);
+double log10_weighted_sum(std::vector<double> & val_vec, std::vector<double> & wts_vec);
 double compute_log10_BF(double beta, double se_beta);
 
 bool   rank_by_fdr (const Locus & loc1 , const Locus & loc2);
