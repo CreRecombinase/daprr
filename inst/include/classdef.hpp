@@ -17,6 +17,18 @@
 extern bool verbose;
 
 
+class BF{
+  const double wt;
+  const double l10;
+  std::array<double,4> kv;
+  std::array<double,4> kva;
+  std::array<double,4> kvb;
+  mutable std::array<double,4> kvc;
+
+public:
+  BF();
+  double compute_log10_BF(const double z_score) const;
+};
 
 
 
@@ -29,9 +41,6 @@ class SNP {
   double log10_BF;
   SNP():id(-1),index(-1),log10_BF(-1){}
   SNP(int snp_id, double snp_log10_BF, int snp_index):id(snp_id),index(snp_index),log10_BF(snp_log10_BF){
-    // id = snp_id;
-    // log10_BF = snp_log10_BF;
-    // index = snp_index;
   }
 };
 
@@ -51,11 +60,7 @@ class Locus {
   
   gsl_vector *prior_vec;
   gsl_vector *pip_vec;
-
-
-  
   double log10_lik; // log10 of marginal likelihood
-  
   double fdr;
 
   gsl::span<const double> BF_sp;
@@ -68,42 +73,6 @@ class Locus {
 												prior_sp(pv),
 												pip_sp(pipv){}
 
-
-    // BF_vec(snpVec.size()+1),
-    // min_index(std::numeric_limits<int>::max()),
-    // max_index(std::numeric_limits<int>::min()){
-
-
-    // std::transform(snpVec.begin(),snpVec.end(),BF_vec.begin(),[&min_index,&max_index](const SNP& snp){
-    // 								min_index = snp.index < min_index ? snp.index : min_index;
-    // 								max_index = snp.index > max_index ? snp.index : max_index;
-    // 								return snp.log10_BF;
-    // 							      });
-
-  
-  
-  // Locus(int locus_id,  std::vector<SNP>  snpVec_):id(locus_id),
-  // 					     snpVec(snpVec_),
-  // 					     prior_vec(nullptr)
-  // 					     pip_vec(nullptr),p_vec(snpVec.size()+1,0.0),
-  //   BF_vec(snpVec.size()+1),
-  //   min_index(std::numeric_limits<int>::max()),
-  //   max_index(std::numeric_limits<int>::min()){
-
-
-  //   std::transform(snpVec.begin(),snpVec.end(),BF_vec.begin(),[&min_index,&max_index](const SNP& snp){
-  // 								min_index = snp.index < min_index ? snp.index : min_index;
-  // 								max_index = snp.index > max_index ? snp.index : max_index;
-  // 								return snp.log10_BF;
-  // 							      });
-
-
-
-
-
-
-
-  // }
 
   Locus(){};
 
@@ -126,7 +95,6 @@ public:
   splitter(std::vector<size_t> &&ret_v_):ret_v(ret_v_){}
   gsl::span<double> split_range(double* data_pt,int idx)const {
     int beg=ret_v[idx];
-    int end_s=ret_v[idx+1];
     int	ret_s =	ret_v[idx+1]-ret_v[idx];
     return(gsl::span<double>(data_pt+beg,ret_s));
   }
@@ -186,10 +154,20 @@ public:
 
 
 
+
+
+
+
+
 class controller {
   const splitter &split;
   
 public:
+  gsl_vector *saved_beta_vec;// = gsl_vector_calloc(ncoef);
+  gsl_vector *saved_prior_vec;// = gsl_vector_calloc(p);
+  gsl_vector *prior_vec;
+  gsl_vector *pip_vec;
+  gsl_vector *beta_vec;
 
 
   controller(const splitter &split_,Result_obj &obj):split(split_),
@@ -209,11 +187,7 @@ public:
   }
 
 
-  gsl_vector *saved_beta_vec;// = gsl_vector_calloc(ncoef);
-  gsl_vector *saved_prior_vec;// = gsl_vector_calloc(p);
-  gsl_vector *prior_vec;
-  gsl_vector *pip_vec;
-  gsl_vector *beta_vec;
+
 
 
   // storage
@@ -234,48 +208,25 @@ public:
 
   std::vector<std::string> dvar_name_vec;
 
-
-  
-  //  gsl_vector_int *dist_bin;
   double EM_thresh;
-  
   gsl_vector_int *dlevel; // (kd+1) entry levels of each factor
-
-
-  gsl_matrix *Xc;  // p x kc
   gsl_matrix_int *Xd; // p x kd
 
-
-  
-
-  
   int ncoef;
 
   double final_log10_lik;
-  
 
   double init_pi1;
-  int nthread; 
-
-
+  int nthread;
   int finish_em;
-
 
   int print_avg;
 
-
-  // void load_data(char *filename);    // load data with MatrixeQTL format -- default
-  // void load_data_zscore(char *filename); // load data with z-score/t-score
-  // void load_data_BF(char *filename); // load data with pre-computed log10 Bayes factors
-  // void load_data_fastqtl(char *filename); //load data with fastQTL format
-  // void torus_d(Rcpp::IntegerVector locus_id, Rcpp::NumericVector z_hat, Rcpp::IntegerMatrix anno_mat);
   void load_data_R(Rcpp::NumericVector z_hat);
   void load_annotations_R(RcppGSL::matrix<int> anno_mat ,std::vector<std::string> names);
 
-  // void load_map(char *gene_map_file, char *snp_map_file);
-  // void load_annotation(char *annot_file);
   int count_factor_level(int col);
-  
+
   void simple_regression();
   void single_ct_regression();
   void single_probt_est();
@@ -287,24 +238,14 @@ public:
 
   void init_params();
     
-  void run_EM();
+  void run_EM(const bool use_glmnet);
 
-
-
-  
-  void find_eGene(double thresh=0.05);
-  Rcpp::DataFrame estimate();
-  //  void dump_prior(char *path);
-  //  double dump_locus_prior(const Locus& loc,fs::path file);
-  //  void dump_pip(char *file);
-
+  Rcpp::DataFrame estimate(bool use_glmnet);
 
  private:
   double eval_likelihood(double x, int index);
   double fine_optimize_beta(int index, double est, double null_log10_lik, double &curr_log10_lik);
   
-
-
 
 };
 

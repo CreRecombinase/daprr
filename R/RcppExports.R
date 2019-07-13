@@ -5,11 +5,31 @@ make_matrix <- function(p, anno_df) {
     .Call(`_daprcpp_make_matrix`, p, anno_df)
 }
 
-torus_df <- function(locus_id, z_hat, anno_df, prior = FALSE, do_verbose = FALSE) {
-    .Call(`_daprcpp_torus_df`, locus_id, z_hat, anno_df, prior, do_verbose)
+make_matrix_df <- function(p, anno_df) {
+    .Call(`_daprcpp_make_matrix_df`, p, anno_df)
 }
 
-torus <- function(locus_id, z_hat, anno_mat, names, prior = FALSE, do_verbose = FALSE) {
-    .Call(`_daprcpp_torus`, locus_id, z_hat, anno_mat, names, prior, do_verbose)
+make_spmatrix_df <- function(p, anno_df) {
+    .Call(`_daprcpp_make_spmatrix_df`, p, anno_df)
+}
+
+torus_df <- function(locus_id, z_hat, anno_df, prior = FALSE, do_verbose = FALSE, use_glmnet = TRUE) {
+    .Call(`_daprcpp_torus_df`, locus_id, z_hat, anno_df, prior, do_verbose, use_glmnet)
+}
+
+torus <- function(locus_id, z_hat, anno_mat, names, prior = FALSE, do_verbose = FALSE, use_glmnet = TRUE) {
+    .Call(`_daprcpp_torus`, locus_id, z_hat, anno_mat, names, prior, do_verbose, use_glmnet)
+}
+
+logit_torus <- function(X, y, lambdaL1 = 0, lambdaL2 = 0) {
+    .Call(`_daprcpp_logit_torus`, X, y, lambdaL1, lambdaL2)
+}
+
+logit_qbinom <- function(X, y) {
+    .Call(`_daprcpp_logit_qbinom`, X, y)
+}
+
+logit_glmnet <- function(X, y, alpha = 0, lambda = 0) {
+    .Call(`_daprcpp_logit_glmnet`, X, y, alpha, lambda)
 }
 

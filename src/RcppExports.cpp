@@ -2,6 +2,7 @@
 // Generator token: 10BE3573-1514-4C36-9D1C-5A225CD40393
 
 #include <RcppGSL.h>
+#include <RcppEigen.h>
 #include <Rcpp.h>
 
 using namespace Rcpp;
@@ -18,9 +19,33 @@ BEGIN_RCPP
     return rcpp_result_gen;
 END_RCPP
 }
+// make_matrix_df
+Rcpp::List make_matrix_df(const size_t p, Rcpp::DataFrame anno_df);
+RcppExport SEXP _daprcpp_make_matrix_df(SEXP pSEXP, SEXP anno_dfSEXP) {
+BEGIN_RCPP
+    Rcpp::RObject rcpp_result_gen;
+    Rcpp::RNGScope rcpp_rngScope_gen;
+    Rcpp::traits::input_parameter< const size_t >::type p(pSEXP);
+    Rcpp::traits::input_parameter< Rcpp::DataFrame >::type anno_df(anno_dfSEXP);
+    rcpp_result_gen = Rcpp::wrap(make_matrix_df(p, anno_df));
+    return rcpp_result_gen;
+END_RCPP
+}
+// make_spmatrix_df
+Rcpp::List make_spmatrix_df(const size_t p, Rcpp::DataFrame anno_df);
+RcppExport SEXP _daprcpp_make_spmatrix_df(SEXP pSEXP, SEXP anno_dfSEXP) {
+BEGIN_RCPP
+    Rcpp::RObject rcpp_result_gen;
+    Rcpp::RNGScope rcpp_rngScope_gen;
+    Rcpp::traits::input_parameter< const size_t >::type p(pSEXP);
+    Rcpp::traits::input_parameter< Rcpp::DataFrame >::type anno_df(anno_dfSEXP);
+    rcpp_result_gen = Rcpp::wrap(make_spmatrix_df(p, anno_df));
+    return rcpp_result_gen;
+END_RCPP
+}
 // torus_df
-Rcpp::List torus_df(Rcpp::IntegerVector locus_id, Rcpp::NumericVector z_hat, Rcpp::DataFrame anno_df, const bool prior, const bool do_verbose);
-RcppExport SEXP _daprcpp_torus_df(SEXP locus_idSEXP, SEXP z_hatSEXP, SEXP anno_dfSEXP, SEXP priorSEXP, SEXP do_verboseSEXP) {
+Rcpp::List torus_df(Rcpp::IntegerVector locus_id, Rcpp::NumericVector z_hat, Rcpp::DataFrame anno_df, const bool prior, const bool do_verbose, bool use_glmnet);
+RcppExport SEXP _daprcpp_torus_df(SEXP locus_idSEXP, SEXP z_hatSEXP, SEXP anno_dfSEXP, SEXP priorSEXP, SEXP do_verboseSEXP, SEXP use_glmnetSEXP) {
 BEGIN_RCPP
     Rcpp::RObject rcpp_result_gen;
     Rcpp::RNGScope rcpp_rngScope_gen;
@@ -29,13 +54,14 @@ BEGIN_RCPP
     Rcpp::traits::input_parameter< Rcpp::DataFrame >::type anno_df(anno_dfSEXP);
     Rcpp::traits::input_parameter< const bool >::type prior(priorSEXP);
     Rcpp::traits::input_parameter< const bool >::type do_verbose(do_verboseSEXP);
-    rcpp_result_gen = Rcpp::wrap(torus_df(locus_id, z_hat, anno_df, prior, do_verbose));
+    Rcpp::traits::input_parameter< bool >::type use_glmnet(use_glmnetSEXP);
+    rcpp_result_gen = Rcpp::wrap(torus_df(locus_id, z_hat, anno_df, prior, do_verbose, use_glmnet));
     return rcpp_result_gen;
 END_RCPP
 }
 // torus
-Rcpp::List torus(Rcpp::IntegerVector locus_id, Rcpp::NumericVector z_hat, RcppGSL::matrix<int> anno_mat, Rcpp::StringVector names, const bool prior, const bool do_verbose);
-RcppExport SEXP _daprcpp_torus(SEXP locus_idSEXP, SEXP z_hatSEXP, SEXP anno_matSEXP, SEXP namesSEXP, SEXP priorSEXP, SEXP do_verboseSEXP) {
+Rcpp::List torus(Rcpp::IntegerVector locus_id, Rcpp::NumericVector z_hat, RcppGSL::matrix<int> anno_mat, Rcpp::StringVector names, const bool prior, const bool do_verbose, bool use_glmnet);
+RcppExport SEXP _daprcpp_torus(SEXP locus_idSEXP, SEXP z_hatSEXP, SEXP anno_matSEXP, SEXP namesSEXP, SEXP priorSEXP, SEXP do_verboseSEXP, SEXP use_glmnetSEXP) {
 BEGIN_RCPP
     Rcpp::RObject rcpp_result_gen;
     Rcpp::RNGScope rcpp_rngScope_gen;
@@ -45,15 +71,61 @@ BEGIN_RCPP
     Rcpp::traits::input_parameter< Rcpp::StringVector >::type names(namesSEXP);
     Rcpp::traits::input_parameter< const bool >::type prior(priorSEXP);
     Rcpp::traits::input_parameter< const bool >::type do_verbose(do_verboseSEXP);
-    rcpp_result_gen = Rcpp::wrap(torus(locus_id, z_hat, anno_mat, names, prior, do_verbose));
+    Rcpp::traits::input_parameter< bool >::type use_glmnet(use_glmnetSEXP);
+    rcpp_result_gen = Rcpp::wrap(torus(locus_id, z_hat, anno_mat, names, prior, do_verbose, use_glmnet));
+    return rcpp_result_gen;
+END_RCPP
+}
+// logit_torus
+RcppGSL::vector<double> logit_torus(RcppGSL::matrix<int> X, RcppGSL::vector<double> y, double lambdaL1, double lambdaL2);
+RcppExport SEXP _daprcpp_logit_torus(SEXP XSEXP, SEXP ySEXP, SEXP lambdaL1SEXP, SEXP lambdaL2SEXP) {
+BEGIN_RCPP
+    Rcpp::RObject rcpp_result_gen;
+    Rcpp::RNGScope rcpp_rngScope_gen;
+    Rcpp::traits::input_parameter< RcppGSL::matrix<int> >::type X(XSEXP);
+    Rcpp::traits::input_parameter< RcppGSL::vector<double> >::type y(ySEXP);
+    Rcpp::traits::input_parameter< double >::type lambdaL1(lambdaL1SEXP);
+    Rcpp::traits::input_parameter< double >::type lambdaL2(lambdaL2SEXP);
+    rcpp_result_gen = Rcpp::wrap(logit_torus(X, y, lambdaL1, lambdaL2));
+    return rcpp_result_gen;
+END_RCPP
+}
+// logit_qbinom
+RcppGSL::vector<double> logit_qbinom(RcppGSL::matrix<int> X, RcppGSL::vector<double> y);
+RcppExport SEXP _daprcpp_logit_qbinom(SEXP XSEXP, SEXP ySEXP) {
+BEGIN_RCPP
+    Rcpp::RObject rcpp_result_gen;
+    Rcpp::RNGScope rcpp_rngScope_gen;
+    Rcpp::traits::input_parameter< RcppGSL::matrix<int> >::type X(XSEXP);
+    Rcpp::traits::input_parameter< RcppGSL::vector<double> >::type y(ySEXP);
+    rcpp_result_gen = Rcpp::wrap(logit_qbinom(X, y));
+    return rcpp_result_gen;
+END_RCPP
+}
+// logit_glmnet
+RcppGSL::vector<double> logit_glmnet(RcppGSL::matrix<int> X, RcppGSL::vector<double> y, double alpha, double lambda);
+RcppExport SEXP _daprcpp_logit_glmnet(SEXP XSEXP, SEXP ySEXP, SEXP alphaSEXP, SEXP lambdaSEXP) {
+BEGIN_RCPP
+    Rcpp::RObject rcpp_result_gen;
+    Rcpp::RNGScope rcpp_rngScope_gen;
+    Rcpp::traits::input_parameter< RcppGSL::matrix<int> >::type X(XSEXP);
+    Rcpp::traits::input_parameter< RcppGSL::vector<double> >::type y(ySEXP);
+    Rcpp::traits::input_parameter< double >::type alpha(alphaSEXP);
+    Rcpp::traits::input_parameter< double >::type lambda(lambdaSEXP);
+    rcpp_result_gen = Rcpp::wrap(logit_glmnet(X, y, alpha, lambda));
     return rcpp_result_gen;
 END_RCPP
 }
 
 static const R_CallMethodDef CallEntries[] = {
     {"_daprcpp_make_matrix", (DL_FUNC) &_daprcpp_make_matrix, 2},
-    {"_daprcpp_torus_df", (DL_FUNC) &_daprcpp_torus_df, 5},
-    {"_daprcpp_torus", (DL_FUNC) &_daprcpp_torus, 6},
+    {"_daprcpp_make_matrix_df", (DL_FUNC) &_daprcpp_make_matrix_df, 2},
+    {"_daprcpp_make_spmatrix_df", (DL_FUNC) &_daprcpp_make_spmatrix_df, 2},
+    {"_daprcpp_torus_df", (DL_FUNC) &_daprcpp_torus_df, 6},
+    {"_daprcpp_torus", (DL_FUNC) &_daprcpp_torus, 7},
+    {"_daprcpp_logit_torus", (DL_FUNC) &_daprcpp_logit_torus, 4},
+    {"_daprcpp_logit_qbinom", (DL_FUNC) &_daprcpp_logit_qbinom, 2},
+    {"_daprcpp_logit_glmnet", (DL_FUNC) &_daprcpp_logit_glmnet, 4},
     {NULL, NULL, 0}
 };
 

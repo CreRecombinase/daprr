@@ -1,12 +1,14 @@
 #include <stdio.h>
 #include <math.h>
+#include <RcppGSL.h>
 #include <gsl/gsl_matrix.h>
 #include <gsl/gsl_rng.h>
 #include <gsl/gsl_multimin.h>
 #include <gsl/gsl_sf.h>
 #include <gsl/gsl_linalg.h>
-#include "logistic.hpp"
 
+#include "logistic.hpp"
+#include <RcppEigen.h>
 // I need to bundle all the data that goes to the function to optimze together. 
 typedef struct{
   gsl_matrix_int *X;
@@ -289,15 +291,6 @@ int logistic_mixed_fit(gsl_vector *beta
 /* Categorical */
 /***************/
 
-// I need to bundle all the data that goes to the function to optimze together. 
-typedef struct{
-  gsl_matrix_int *X;
-  gsl_vector_int *nlev;
-  gsl_vector *y;
-  double lambdaL1;
-  double lambdaL2;
-}fix_parm_cat_T;
-
 
 double fLogit_cat(gsl_vector *beta
 		  ,gsl_matrix_int *X
@@ -482,7 +475,7 @@ int logistic_cat_fit(gsl_vector *beta
 {
   double mLogLik=0;
   fix_parm_cat_T p;
-  int npar = beta->size; 
+  int npar = beta->size;
   int iter=0;
   double maxchange=0;
 
@@ -492,7 +485,7 @@ int logistic_cat_fit(gsl_vector *beta
   p.y=y;
   p.lambdaL1=lambdaL1;
   p.lambdaL2=lambdaL2;
-  
+
   //Initial fit
 
   mLogLik = wgsl_cat_optim_f(beta,&p);
@@ -506,13 +499,13 @@ int logistic_cat_fit(gsl_vector *beta
   gsl_vector *myG = gsl_vector_alloc(npar); /* Gradient*/
   gsl_vector *tau = gsl_vector_alloc(npar); /* tau for QR*/
 
-  for(iter=0;iter<100;iter++){ 
+  for(iter=0;iter<100;iter++){
     wgsl_cat_optim_hessian(beta,&p,myH); //Calculate Hessian
     wgsl_cat_optim_df(beta,&p,myG);      //Calculate Gradient
     gsl_linalg_QR_decomp(myH,tau);   //Calculate next beta
     gsl_linalg_QR_solve(myH,tau,myG,stBeta);
     gsl_vector_sub(beta,stBeta);
-    
+
     //Monitor convergence
     maxchange=0;
     for(int i=0;i<npar; i++)
@@ -780,3 +773,112 @@ int logistic_cont_fit(gsl_vector *beta
   return 0;
 }
 
+Logistic::Logistic(const size_t npar_,const size_t p_):npar(npar_),
+						       p(p_),
+						       ty(p,2),
+						       myH(gsl_matrix_alloc(npar,npar)),
+						       stBeta(gsl_vector_alloc(npar)),
+						       myG(gsl_vector_alloc(npar)),
+						       tau(gsl_vector_alloc(npar))
+{
+}
+
+void Logistic::fit_qbinom(RcppGSL::vector<double> beta ,RcppGSL::matrix<int> X,RcppGSL::vector<double> y){
+
+  using namespace Rcpp;
+  Environment pkg = Environment::namespace_env("stats");
+  Function qb =  pkg["quasibinomial"];
+
+  auto qbf = qb("logit");
+    // Picking up Matrix() function from Matrix package
+  Function f = pkg["glm.fit"];
+
+  auto ctrlL = List::create(_["epsilon"]=NumericVector::create(1e-08),
+			    _["maxit"]=NumericVector::create(25),
+			    _["trace"]=LogicalVector::create(true));
+  List ret_l = f( X,ty, Named("family", qbf),Named("control",ctrlL),Named("start",beta));
+
+  Rcpp::NumericVector m = (ret_l["coefficients"]);
+  for(int i=0; i < m.size(); i++){
+    beta[i]=m(i);
+  }
+}
+
+void Logistic::fit_glmnet(RcppGSL::vector<double> beta ,RcppGSL::matrix<int> X,RcppGSL::vector<double> y,double alpha,double lambda){
+
+  for(int i=0; i<p; i++){
+    ty(i,0)=1-y[i];
+    ty(i,1)=y[i];
+  }
+
+  Rcpp::Environment pkg = Rcpp::Environment::namespace_env("glmnet");
+
+    // Picking up Matrix() function from Matrix package
+  Rcpp::Function f = pkg["glmnet"];
+  Rcpp::List ret_l = f( X,ty, Rcpp::Named("family", "binomial"),Rcpp::Named("alpha",alpha),Rcpp::Named("lambda",lambda),Rcpp::Named("type.logistic","modified.Newton"));
+  auto m = Rcpp::as<Eigen::Map<Eigen::SparseMatrix<double> > >(ret_l["beta"]);
+  beta[0] = Rcpp::as<Rcpp::NumericVector>(ret_l["a0"])[0];
+  for(int i=0; i < m.size(); i++){
+    beta[i+1]=m.coeff(i,0);
+  }
+  // return m;
+}
+
+
+
+
+
+  //  Rcpp::NumericMatrix ty(
+void Logistic::fit(gsl_vector *beta,gsl_matrix_int *X,gsl_vector_int *nlev,gsl_vector *y,double lambdaL1,double lambdaL2){
+
+
+
+  double mLogLik=0;
+  int iter=0;
+  double maxchange=0;
+
+  fix_parm_cat_T p;
+  int npar = beta->size;
+
+  //Intializing fix parameters
+  p.X=X;
+  p.nlev=nlev;
+  p.y=y;
+  p.lambdaL1=lambdaL1;
+  p.lambdaL2=lambdaL2;
+
+  //Initial fit
+  mLogLik = wgsl_cat_optim_f(beta,&p);
+#ifdef _RPR_DEBUG_
+  fprintf(stderr,"#Initial -log(Lik(0))=%lf\n",mLogLik);
+#endif //_RPR_DEBUG
+
+  for(iter=0;iter<100;iter++){
+    wgsl_cat_optim_hessian(beta,&p,myH); //Calculate Hessian
+    wgsl_cat_optim_df(beta,&p,myG);      //Calculate Gradient
+    gsl_linalg_QR_decomp(myH,tau);   //Calculate next beta
+    gsl_linalg_QR_solve(myH,tau,myG,stBeta);
+    gsl_vector_sub(beta,stBeta);
+
+    //Monitor convergence
+    maxchange=0;
+    for(int i=0;i<npar; i++)
+      if(maxchange<fabs(stBeta->data[i]))
+	maxchange=fabs(stBeta->data[i]);
+    if(maxchange<1E-4)
+      break;
+  }
+
+#ifdef _RPR_DEBUG_
+  for (int i = 0; i < npar; i++)
+    fprintf(stderr,"#par_%d= %lf\n",i,beta->data[i]);
+#endif //_RPR_DEBUG
+
+  //Final fit
+  mLogLik = wgsl_cat_optim_f(beta,&p);
+  //fprintf(stderr,"#Final %d) -log(Lik(0))=%lf, maxchange %lf\n",iter,mLogLik,maxchange);
+
+
+
+  //return 0;
+}
