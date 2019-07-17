@@ -56,10 +56,8 @@ class Locus {
   // possible gene information/annotation
   int id;
   
-  std::vector<SNP> snpVec;
-  
-  gsl_vector *prior_vec;
-  gsl_vector *pip_vec;
+  // gsl_vector *prior_vec;
+  // gsl_vector *pip_vec;
   double log10_lik; // log10 of marginal likelihood
   double fdr;
 
@@ -101,6 +99,16 @@ public:
   const int num_regions()const {
     return(static_cast<int>(ret_v.size()-1));
   }
+  std::vector<gsl::span<double> > split_view(double* data_pt) const{
+
+    const int tot_r= num_regions();
+    std::vector< gsl::span<double> > groupv(tot_r);
+    for(int i=0; i<tot_r; i++){
+      groupv[i]=split_range(data_pt,i);
+    }
+    return groupv;
+  }
+
 };
 
 

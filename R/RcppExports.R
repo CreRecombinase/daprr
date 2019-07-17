@@ -13,12 +13,12 @@ make_spmatrix_df <- function(p, anno_df) {
     .Call(`_daprcpp_make_spmatrix_df`, p, anno_df)
 }
 
-torus_df <- function(locus_id, z_hat, anno_df, prior = FALSE, do_verbose = FALSE, use_glmnet = TRUE) {
-    .Call(`_daprcpp_torus_df`, locus_id, z_hat, anno_df, prior, do_verbose, use_glmnet)
-}
-
 torus <- function(locus_id, z_hat, anno_mat, names, prior = FALSE, do_verbose = FALSE, use_glmnet = TRUE) {
     .Call(`_daprcpp_torus`, locus_id, z_hat, anno_mat, names, prior, do_verbose, use_glmnet)
+}
+
+torus_df <- function(locus_id, z_hat, anno_df, prior = FALSE, do_verbose = FALSE, use_glmnet = TRUE) {
+    .Call(`_daprcpp_torus_df`, locus_id, z_hat, anno_df, prior, do_verbose, use_glmnet)
 }
 
 logit_torus <- function(X, y, lambdaL1 = 0, lambdaL2 = 0) {
@@ -29,7 +29,7 @@ logit_qbinom <- function(X, y) {
     .Call(`_daprcpp_logit_qbinom`, X, y)
 }
 
-logit_glmnet <- function(X, y, alpha = 0, lambda = 0) {
+logit_glmnet <- function(X, y, alpha = 0, lambda = as.numeric( c(0))) {
     .Call(`_daprcpp_logit_glmnet`, X, y, alpha, lambda)
 }
 

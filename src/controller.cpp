@@ -11,7 +11,6 @@
 #include <boost/config/warning_disable.hpp>
 #include "logistic.hpp"
 #include <wordexp.h>
-#include "parser.hpp"
 #include <sys/types.h>
 #include <errno.h>
 
@@ -128,10 +127,10 @@ void controller::init_params(){
   }
 
 
-  for(int i=0;i<locVec.size();i++){
-    locVec[i].pip_vec = pip_vec;
-    locVec[i].prior_vec = prior_vec;
-  }
+  // for(int i=0;i<locVec.size();i++){
+  //   locVec[i].pip_vec = pip_vec;
+  //   locVec[i].prior_vec = prior_vec;
+  // }
 
   if(verbose){
     Rcpp::Rcerr<<"initialized"<<std::endl;
@@ -150,13 +149,10 @@ void controller::run_EM(const bool use_glmnet){
     if(verbose){
       Rcpp::Rcerr<<"iter no:"<<itcc++<<std::endl;
     }
-    
     double curr_log10_lik = 0;
     for(auto &lv : locVec){
-   
       lv.EM_update();
       curr_log10_lik += lv.log10_lik;
-               
     }
     if(ncoef==1){
       if(verbose){
@@ -186,18 +182,21 @@ void controller::run_EM(const bool use_glmnet){
 	Rcpp::Rcerr<<"cat_pred"<<std::endl;
 	Rcpp::Rcerr<<"beta:\n";
       }
-      	gsl::span<double> beta_sp(beta_vec->data,beta_vec->size);
-	for(auto be : beta_sp){
-	  if(verbose){
-	    Rcpp::Rcerr<<be<<"\n";
-	  }
-	  if(isnan(be)){
-	    Rcpp::stop("NaN encountered in beta");
-	  }
-	}
+      gsl::span<double> beta_sp(beta_vec->data,beta_vec->size);
+      if(std::accumulate(beta_sp.begin(),beta_sp.end(),0)<1e-8){
+	Rcpp::Rcerr<<"Beta is entirely 0..."<<std::endl;
+      }
+      for(auto be : beta_sp){
 	if(verbose){
-	  Rcpp::Rcerr<<std::endl;
+	  Rcpp::Rcerr<<be<<"\n";
 	}
+	if(isnan(be)){
+	  Rcpp::stop("NaN encountered in beta");
+	}
+      }
+      if(verbose){
+	Rcpp::Rcerr<<std::endl;
+      }
       logistic_cat_pred(beta_vec, Xd, dlevel,prior_vec);
     }
 
@@ -209,13 +208,13 @@ void controller::run_EM(const bool use_glmnet){
 
     last_log10_lik = curr_log10_lik;
   }
-  
-  
+
+
   double tp = 0;
   for(int i=0;i<p;i++){
     tp += gsl_vector_get(prior_vec,i);
   }
-  
+
 }
 
 
@@ -385,8 +384,6 @@ Rcpp::DataFrame controller::estimate(bool use_glmnet){
       }
   
       double diff = (final_log10_lik - null_log10_lik)/log10(exp(1));
-      
-
 
       if(diff<0){
 	double curr_log10_lik = final_log10_lik;
@@ -397,6 +394,7 @@ Rcpp::DataFrame controller::estimate(bool use_glmnet){
       if(diff<1e-8){
 	diff = 1e-8;
       }
+
       double sd = fabs(est)/sqrt(2*diff);
 
       estvec.push_back(est);
@@ -442,11 +440,7 @@ Rcpp::DataFrame controller::estimate(bool use_glmnet){
 double controller::fine_optimize_beta(int index, double est, double null_log10_lik, double &curr_log10_lik){
   
   double gr = (sqrt(5)-1)/2.0;
-  
-  /*
-  double a = -fabs(est);
-  double b = fabs(est);
-  */
+
 
   double a = est;
   double b = 0;
@@ -467,36 +461,28 @@ double controller::fine_optimize_beta(int index, double est, double null_log10_l
 
 
   while((d-c)>thresh){
-    
+
     fc = eval_likelihood(c, index);
     fd = eval_likelihood(d, index);
 
-    
-    ////printf("%f %f %f %f   %f %f   %f\n",a, d
     if(fc > fd){
 
       b = d;
       d = c;
       c = b - gr*(b-a);
     }else{
-      /*
-      if(fd > null_log10_lik){
-        curr_log10_lik = fd;
-	return d;
-      }
-      */
       a = c;
       c = d;
       d = a + gr*(b-a);
     }
   }
-  
+
 
   curr_log10_lik = fc;
 
   return (b+a)/2;
 
-  
+
   
 }
 
@@ -504,13 +490,10 @@ double controller::fine_optimize_beta(int index, double est, double null_log10_l
 
 double controller::eval_likelihood(double x, int index){
 
-
   gsl_vector_set(beta_vec,index, x);
-
   if(kd!=0){
     logistic_cat_pred(beta_vec, Xd, dlevel,prior_vec);
   }
-
   double log10_lik = 0;
   for(int k=0;k<locVec.size();k++){
     locVec[k].EM_update();
@@ -572,10 +555,6 @@ void Locus::EM_update(){
 void Locus::compute_fdr(){
 
   double locus_pi0 = 1;
-
-  // compute log10_lik
-  // vector<double> BF_vec;
-  // vector<double> p_vec;
   std::transform(prior_sp.begin(),prior_sp.end(),prior_sp.begin(),[&locus_pi0](double prior){
 								     locus_pi0*=(1-prior);
 								     return(prior/(1-prior));
@@ -590,7 +569,6 @@ void Locus::compute_fdr(){
   std::transform(prior_sp.begin(),prior_sp.end()-1,BF_sp.begin(),pip_sp.begin(),
 		 [ll](double prior,double log10_BF){
 		   return pow(10,(log10(prior) + log10_BF - ll));
-
 		 });
 
 

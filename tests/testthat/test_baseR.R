@@ -39,9 +39,7 @@ test_that("torus_df and torus give comparable results",{
   res_a <- torus(locus_id = rep(1L,p),z_hat = y,anno_mat = annomat_l$annomat,names = annomat_l$names)
   res_b <- torus_df(locus_id = rep(1L,p),z_hat = y,anno_df = anno_df)
   expect_equal(res_a,res_b)  
-  expect_equal(true_res_a,res_b$est)
-  
-  
+  expect_equal(true_res_a,res_b$est,tolerance=1e-2)
 })
 
 
