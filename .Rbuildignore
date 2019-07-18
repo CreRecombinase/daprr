@@ -2,3 +2,5 @@
 ^\.Rproj\.user$
 ^data-raw$
 ^inst/test.Rmd
+compile_commands.json
+^vgcore*

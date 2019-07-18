@@ -36,8 +36,8 @@ test_that("torus_df and torus give comparable results",{
 0.00463521179289106, 0.00463521179289106)), class = "data.frame", row.names = c(NA, 
 -3L))
   
-  res_a <- torus(locus_id = rep(1L,p),z_hat = y,anno_mat = annomat_l$annomat,names = annomat_l$names)
-  res_b <- torus_df(locus_id = rep(1L,p),z_hat = y,anno_df = anno_df)
+  res_a <- torus(locus_id = rep(1L,p),z_hat = y,anno_mat = annomat_l$annomat,names = annomat_l$names,use_glmnet = F)
+  res_b <- torus_df(locus_id = rep(1L,p),z_hat = y,anno_df = anno_df,use_glmnet = F)
   expect_equal(res_a,res_b)  
   expect_equal(true_res_a,res_b$est,tolerance=1e-2)
 })

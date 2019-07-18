@@ -7,6 +7,20 @@
 
 using namespace Rcpp;
 
+// logit_glmnet
+Rcpp::NumericMatrix logit_glmnet(Eigen::MatrixXd X, std::vector<double> y, double alpha, Rcpp::NumericVector lambda);
+RcppExport SEXP _daprcpp_logit_glmnet(SEXP XSEXP, SEXP ySEXP, SEXP alphaSEXP, SEXP lambdaSEXP) {
+BEGIN_RCPP
+    Rcpp::RObject rcpp_result_gen;
+    Rcpp::RNGScope rcpp_rngScope_gen;
+    Rcpp::traits::input_parameter< Eigen::MatrixXd >::type X(XSEXP);
+    Rcpp::traits::input_parameter< std::vector<double> >::type y(ySEXP);
+    Rcpp::traits::input_parameter< double >::type alpha(alphaSEXP);
+    Rcpp::traits::input_parameter< Rcpp::NumericVector >::type lambda(lambdaSEXP);
+    rcpp_result_gen = Rcpp::wrap(logit_glmnet(X, y, alpha, lambda));
+    return rcpp_result_gen;
+END_RCPP
+}
 // make_matrix
 Rcpp::List make_matrix(const size_t p, Rcpp::DataFrame anno_df);
 RcppExport SEXP _daprcpp_make_matrix(SEXP pSEXP, SEXP anno_dfSEXP) {
@@ -102,22 +116,9 @@ BEGIN_RCPP
     return rcpp_result_gen;
 END_RCPP
 }
-// logit_glmnet
-Rcpp::NumericMatrix logit_glmnet(Eigen::MatrixXd X, Rcpp::NumericVector y, double alpha, Rcpp::NumericVector lambda);
-RcppExport SEXP _daprcpp_logit_glmnet(SEXP XSEXP, SEXP ySEXP, SEXP alphaSEXP, SEXP lambdaSEXP) {
-BEGIN_RCPP
-    Rcpp::RObject rcpp_result_gen;
-    Rcpp::RNGScope rcpp_rngScope_gen;
-    Rcpp::traits::input_parameter< Eigen::MatrixXd >::type X(XSEXP);
-    Rcpp::traits::input_parameter< Rcpp::NumericVector >::type y(ySEXP);
-    Rcpp::traits::input_parameter< double >::type alpha(alphaSEXP);
-    Rcpp::traits::input_parameter< Rcpp::NumericVector >::type lambda(lambdaSEXP);
-    rcpp_result_gen = Rcpp::wrap(logit_glmnet(X, y, alpha, lambda));
-    return rcpp_result_gen;
-END_RCPP
-}
 
 static const R_CallMethodDef CallEntries[] = {
+    {"_daprcpp_logit_glmnet", (DL_FUNC) &_daprcpp_logit_glmnet, 4},
     {"_daprcpp_make_matrix", (DL_FUNC) &_daprcpp_make_matrix, 2},
     {"_daprcpp_make_matrix_df", (DL_FUNC) &_daprcpp_make_matrix_df, 2},
     {"_daprcpp_make_spmatrix_df", (DL_FUNC) &_daprcpp_make_spmatrix_df, 2},
@@ -125,7 +126,6 @@ static const R_CallMethodDef CallEntries[] = {
     {"_daprcpp_torus_df", (DL_FUNC) &_daprcpp_torus_df, 6},
     {"_daprcpp_logit_torus", (DL_FUNC) &_daprcpp_logit_torus, 4},
     {"_daprcpp_logit_qbinom", (DL_FUNC) &_daprcpp_logit_qbinom, 2},
-    {"_daprcpp_logit_glmnet", (DL_FUNC) &_daprcpp_logit_glmnet, 4},
     {NULL, NULL, 0}
 };
 

@@ -183,9 +183,9 @@ void controller::run_EM(const bool use_glmnet){
 	Rcpp::Rcerr<<"beta:\n";
       }
       gsl::span<double> beta_sp(beta_vec->data,beta_vec->size);
-      if(std::accumulate(beta_sp.begin(),beta_sp.end(),0)<1e-8){
-	Rcpp::Rcerr<<"Beta is entirely 0..."<<std::endl;
-      }
+      // if(std::accumulate(beta_sp.begin(),beta_sp.end(),0)<1e-8){
+      // 	//	Rcpp::Rcerr<<"Beta is entirely 0..."<<std::endl;
+      // }
       for(auto be : beta_sp){
 	if(verbose){
 	  Rcpp::Rcerr<<be<<"\n";
