@@ -10,7 +10,8 @@ Description: One paragraph description of what the package does as one or
 License: GPL (>= 2)
 Imports: 
     Rcpp (>= 1.0.1),
-    glmnet  
+    glmnet,
+    magrittr
 LinkingTo: 
     Rcpp,
     RcppGSL,
