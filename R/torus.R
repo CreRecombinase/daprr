@@ -18,6 +18,69 @@ write_gwas <- function(gwas_df,gf=tempfile(fileext=".txt.gz")){
 
 
 
+# 
+# map_torus_cmd <- function(gf,af,torus_p=character(0)){
+#   torus_path <- system.file("dap-master/torus_src/torus",package = "daprcpp")
+#   stopifnot(file.exists(torus_path),torus_path!="")
+#   fo <- fs::file_info(torus_path)
+#   stopifnot((fo$permissions & "u+x") == "u+x")
+#   torus_d <- map_chr(length(gf),fs::file_temp())
+#   lik_file <- map_chr(length(gf),fs::file_temp())
+#   if(length(torus_p)>0){
+#     p_f <- fs::path(torus_d,torus_p,ext="prior")
+#     stopifnot(!fs::dir_exists(torus_d))
+#     res_args_l <- pmap(list(gf,af,lik_file,torus_d),~c(
+#       "-d",
+#       fs::path_expand(.1),
+#       "-annot",
+#       fs::path_expand(.2),
+#       "--load_zval",
+#       "-lik",
+#       .3,
+#       "-est",
+#       "-dump_prior",
+#       .4))
+# 
+#   } else{
+#     res_args_l <- pmap(list(gf,af,lik_file),~c(
+#       "-d",
+#       fs::path_expand(.1),
+#       "-annot",
+#       fs::path_expand(.2),
+#       "--load_zval",
+#       "-lik",
+#       .2,
+#       "-est"
+#     ))
+#   }
+#   res <- processx::run(torus_path,args = res_args,echo_cmd = TRUE,)
+#   df <- read.table(file = textConnection(res$stdout),skip=1,header=F,stringsAsFactors = F)
+#   colnames(df) <- c("term", "estimate", "low", "high")
+#   
+#   df <- dplyr::mutate(df,term=stringr::str_replace(term,pattern = "\\.[0-9]+$",replacement = ""),
+#                       sd=(low-estimate)/(-1.96),z=estimate/sd,p=pnorm(abs(z),lower.tail = FALSE))
+#   lik <- scan(lik_file,what=numeric())
+#   file.remove(lik_file)
+#   df <- nest(df) %>% mutate(lik=lik)
+#   if(length(torus_p)>0){
+#     stopifnot(all(fs::file_exists(p_f)))
+#     prior_l <- map(torus_p,function(x){
+#       fp <- as.character(fs::path(torus_d,x,ext="prior"))
+#       suppressMessages(
+#         ret <- vroom::vroom(file = fp,delim = "  ",trim_ws = T,col_names = c("SNP","prior"),col_types = cols("SNP"="i","prior"="d")) %>% mutate(region_id=x)
+#       )
+#       return(ret)
+#     })
+#     fs::file_delete(p_f)
+#     names(prior_l) <- torus_p
+#     return(list(df=df,priors=prior_l))
+#   }else{
+#     return(list(df=df))
+#   }
+# }
+
+
+
 
 run_torus_cmd <- function(gf,af,torus_p=character(0)){
   torus_path <- system.file("dap-master/torus_src/torus",package = "daprcpp")
@@ -121,7 +184,7 @@ forward_select_fun <- function(f,params,combo_fun,extract_terms,steps=1L,ret_all
   }
   
   for(i in seq_len(steps+1L)){
-    all_fit <- purrr::map(term_selection,db_fun)
+    all_fit <- furrr::future_map(term_selection,db_fun)
     all_results[[i]] <- all_fit
     lik_vec <- map_dbl(all_fit,~.x$df$lik)
     best_fit <- all_fit[[which.max(lik_vec)]]
