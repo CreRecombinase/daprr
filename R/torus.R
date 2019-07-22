@@ -1,3 +1,13 @@
+#' Title
+#'
+#' @param anno_df 
+#' @param p 
+#' @param af 
+#'
+#' @return
+#' @export
+#'
+#' @examples
 write_anno <- function(anno_df=tibble(SNP=integer(),feature=character()),p=max(max(anno_df$SNP),1L),af=tempfile(fileext=".txt.gz")){
   if(is.null(anno_df)){
     return(write_anno(af=af))
@@ -7,9 +17,19 @@ write_anno <- function(anno_df=tibble(SNP=integer(),feature=character()),p=max(m
     mutate(SNP=1:n()) %>% dplyr::select(SNP,dplyr::everything()) %>% filter_at(.vars = vars(-SNP),any_vars(. != 0))
   readr::write_tsv(spread_anno_df,path=af)
   return(af)
+  
 }
 
 
+#' Title
+#'
+#' @param gwas_df 
+#' @param gf 
+#'
+#' @return
+#' @export
+#'
+#' @examples
 write_gwas <- function(gwas_df,gf=tempfile(fileext=".txt.gz")){
   
   dplyr::select(gwas_df,SNP,region_id,`z-stat`) %>% write_tsv(path=gf)
@@ -17,6 +37,18 @@ write_gwas <- function(gwas_df,gf=tempfile(fileext=".txt.gz")){
 }
 
 
+#' Title
+#'
+#' @param gf 
+#' @param af 
+#' @param torus_p 
+#'
+#' @return
+#' @export
+#' @useDynLib daprcpp
+#' @importFrom Rcpp sourceCpp
+#'
+#' @examples
 run_torus_cmd <- function(gf,af,torus_p=character(0)){
   torus_path <- system.file("dap-master/torus_src/torus",package = "daprcpp")
   stopifnot(file.exists(torus_path),torus_path!="")
@@ -80,6 +112,14 @@ run_torus_cmd <- function(gf,af,torus_p=character(0)){
 
 
 
+#' Title
+#'
+#' @param fit 
+#'
+#' @return
+#' @export
+#'
+#' @examples
 coef.torus <- function(fit){
   ret <- tidyr::unnest(fit$df)
   retvec <- ret$estimate
@@ -136,6 +176,18 @@ forward_select_fun <- function(f,params,combo_fun,extract_terms,steps=1L,ret_all
 }
 
 
+#' Title
+#'
+#' @param gwas_df 
+#' @param full_anno_df 
+#' @param steps 
+#' @param p_cutoff 
+#' @param torus_p 
+#'
+#' @return
+#' @export
+#'
+#' @examples
 fs_torus <- function(gwas_df,full_anno_df,steps=1L,p_cutoff=1,torus_p=character(0)){
   
   params <- unique(full_anno_df$feature)
@@ -161,6 +213,21 @@ fs_torus <- function(gwas_df,full_anno_df,steps=1L,p_cutoff=1,torus_p=character(
 }
   
 
+#' Title
+#'
+#' @param gf 
+#' @param anno_df 
+#' @param f_feat_df 
+#' @param term_df 
+#' @param i 
+#' @param p 
+#' @param prior 
+#' @param verbose 
+#'
+#' @return
+#' @export
+#'
+#' @examples
 forward_op_torus_cmd <- function(gf,anno_df,f_feat_df,term_df,i,p,prior=NA_integer_,verbose=F){
   fn <- slice(term_df,i)
   miss_df <- anti_join(fn,unnest(f_feat_df))

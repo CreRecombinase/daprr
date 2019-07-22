@@ -186,7 +186,7 @@ public:
 
 
 
-
+//' @export
 //[[Rcpp::export]]
 Rcpp::List make_matrix(const size_t p,Rcpp::DataFrame anno_df){
 
