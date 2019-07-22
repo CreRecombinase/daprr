@@ -2,6 +2,11 @@
 .Rhistory
 .RData
 .Ruserdata
+inst/dap-master/torus_src/torus
+inst/dap-master/torus_src/*o
+autom4te.cache/*
+inst/dap-master/dap_src/.*
+inst/dap-master/dap_src/torus
 src/*.o
 src/*.so
 src/*.dll
