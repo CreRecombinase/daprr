@@ -92,10 +92,10 @@ run_torus_cmd <- function(gf,af,torus_p=character(0)){
                       sd=(low-estimate)/(-1.96),z=estimate/sd,p=pnorm(abs(z),lower.tail = FALSE))
   lik <- scan(lik_file,what=numeric())
   file.remove(lik_file)
-  df <- nest(df) %>% dplyr::mutate(lik=lik)
+  df <- tidyr::nest(df) %>% dplyr::mutate(lik=lik)
   if(length(torus_p)>0){
     stopifnot(all(fs::file_exists(p_f)))
-    prior_l <- map(torus_p,function(x){
+    prior_l <- purrr::map(torus_p,function(x){
       fp <- as.character(fs::path(torus_d,x,ext="prior"))
       suppressMessages(
         ret <- vroom::vroom(file = fp,delim = "  ",trim_ws = T,col_names = c("SNP","prior"),col_types = cols("SNP"="i","prior"="d")) %>% dplyr::mutate(region_id=x)
