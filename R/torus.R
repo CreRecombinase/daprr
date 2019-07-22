@@ -14,7 +14,9 @@ write_anno <- function(anno_df=tibble(SNP=integer(),feature=character()),p=max(m
   }
   spread_anno_l <- make_matrix(p = p,anno_df = anno_df)
   spread_anno_df <- tibble::as_tibble(magrittr::set_colnames(spread_anno_l$annomat,paste0(spread_anno_l$names,"_d"))) %>%
-    mutate(SNP=1:n()) %>% dplyr::select(SNP,dplyr::everything()) %>% filter_at(.vars = vars(-SNP),any_vars(. != 0))
+    dplyr::mutate(SNP=1:dplyr::n()) %>% 
+    dplyr::select(SNP,dplyr::everything()) %>%
+    dplyr::filter_at(.vars = dplyr::vars(-SNP),dplyr::any_vars(. != 0))
   readr::write_tsv(spread_anno_df,path=af)
   return(af)
   

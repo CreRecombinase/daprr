@@ -11,7 +11,9 @@ License: GPL (>= 2)
 Imports: 
     Rcpp (>= 1.0.1),
     glmnet,
-    magrittr
+    magrittr,
+    dplyr,
+    tibble
 LinkingTo: 
     Rcpp,
     RcppGSL,
