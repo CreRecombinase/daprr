@@ -1726,6 +1726,8 @@ fi
 
 ##AC_SUBST(RCPP_LDFLAGS)
 
+make -C inst/dap-master/torus_src
+
 ac_config_files="$ac_config_files src/Makevars"
 
 cat >confcache <<\_ACEOF

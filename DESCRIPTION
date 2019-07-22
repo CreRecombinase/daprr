@@ -13,6 +13,7 @@ Imports:
     glmnet  
 LinkingTo: 
     Rcpp,
+    testthat,
     RcppGSL,
     BH,
     RcppEigen

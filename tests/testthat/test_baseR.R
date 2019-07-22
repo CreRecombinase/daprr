@@ -19,11 +19,30 @@ context("utils")
 #   expect_equal(lr,lrR)
 #   
 # })
+# 
+# 
+# 
+test_that("daprcpp and torus give similar results",{
+  
+    snpnum <- 10000 
+    p <- 3
+    
+    anno_r <- 100
+    anno_df <- tibble::tibble(SNP=sample(snpnum,anno_r,replace=T),
+                              feature=sample(paste0(letters,"_d")[1:p],anno_r,replace=T))
+    
+    
+    gw_df <- tibble::tibble(SNP=1:snpnum,region_id=cut(1:snpnum,breaks = 3L,labels = F),`z-hat`=rnorm(n=snpnum))
+    
+  
+  
+  
+})
 
 
 test_that("torus_df and torus give comparable results",{
   
-  p <- 4
+
   anno_df <- tibble::tibble(SNP=c(1,3,4),feature=factor(c("aa","aa","ab")))  
   annomat_l <- make_matrix(p,anno_df)
   y <- c(0.684902017234619, 2.44814199215588, 0.116413627382255, 1.4847548363253

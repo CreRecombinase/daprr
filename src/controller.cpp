@@ -14,6 +14,7 @@
 #include <sys/types.h>
 #include <errno.h>
 
+namespace donut{
 
 
 BF::BF():wt(1/4.0),
@@ -88,8 +89,8 @@ void controller::load_annotations_R(RcppGSL::matrix<int> anno_mat,std::vector<st
     Rcpp::stop("names and anno_mat do not match in size:"+std::to_string(kd)+" vs "+std::to_string(names.size()));
   }
   dvar_name_vec=names;
-  Xd =  anno_mat;
-  dlevel = gsl_vector_int_calloc(kd);
+  //  Xd =  anno_mat;
+  //  dlevel = gsl_vector_int_calloc(kd);
 
   for(int i=0;i<kd;i++){
     int nl = count_factor_level(i);
@@ -614,4 +615,7 @@ double log10_weighted_sum(std::vector<double> &vec, std::vector<double> &wts){
 
 bool rank_by_fdr (const Locus & loc1 , const Locus & loc2){
   return (loc1.fdr < loc2.fdr);
+}
+
+
 }

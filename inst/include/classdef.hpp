@@ -16,6 +16,104 @@
 
 extern bool verbose;
 
+template<class Archive>
+void save(Archive & archive,
+	  RcppGSL::matrix<int> const & m){
+
+  Rcpp::IntegerMatrix rm = Rcpp::wrap(m);
+  archive(rm);
+
+}
+
+
+template<class Archive>
+void save(Archive & archive,
+	  RcppGSL::vector<double> const & m){
+
+  Rcpp::NumericVector rm = Rcpp::wrap(m);
+  archive(rm);
+}
+
+
+
+
+template<class Archive>
+void save(Archive & archive,
+	  RcppGSL::matrix<double> const & m){
+
+  Rcpp::NumericMatrix rm = Rcpp::wrap(m);
+  archive(rm);
+
+}
+
+
+template<class Archive>
+void save(Archive & archive,
+	  RcppGSL::vector<int> const & m){
+
+  Rcpp::IntegerVector rm = Rcpp::wrap(m);
+  archive(rm);
+}
+
+
+
+///////
+
+
+template<class Archive>
+void load(Archive & archive,
+	  RcppGSL::matrix<int> & m){
+
+  Rcpp::IntegerMatrix rm;
+  archive(rm);
+  m = Rcpp::as<RcppGSL::matrix<int> >(rm);
+
+}
+
+
+template<class Archive>
+void load(Archive & archive,
+	  RcppGSL::vector<double> & m){
+
+  Rcpp::NumericVector rm;
+  archive(rm);
+  m = Rcpp::as<RcppGSL::vector<double> >(rm);
+
+}
+
+
+
+
+template<class Archive>
+void load(Archive & archive,
+	  RcppGSL::matrix<double> & m){
+  Rcpp::NumericMatrix rm;
+  archive(rm);
+  m = Rcpp::as<RcppGSL::matrix<double> >(rm);
+
+
+}
+
+
+template<class Archive>
+void load(Archive & archive,
+	  RcppGSL::vector<int> & m){
+
+  Rcpp::IntegerVector rm;
+  archive(rm);
+  m = Rcpp::as<RcppGSL::vector<int> >(rm);
+}
+
+
+
+
+
+
+
+
+
+
+namespace donut {
 
 class BF{
   const double wt;
@@ -45,10 +143,6 @@ class SNP {
 };
 
 
-
-
-
-
 class Locus {
   
  public:
@@ -70,8 +164,6 @@ class Locus {
 												BF_sp(BFv),
 												prior_sp(pv),
 												pip_sp(pipv){}
-
-
   Locus(){};
 
   
@@ -82,14 +174,11 @@ class Locus {
 
 };
 
-
-
-
-
-
 class splitter{
   std::vector<size_t> ret_v;
 public:
+  splitter(Rcpp::IntegerVector ser):ret_v(Rcpp::as<std::vector<size_t>>(ser)){
+  }
   splitter(std::vector<size_t> &&ret_v_):ret_v(ret_v_){}
   gsl::span<double> split_range(double* data_pt,int idx)const {
     int beg=ret_v[idx];
@@ -100,7 +189,6 @@ public:
     return(static_cast<int>(ret_v.size()-1));
   }
   std::vector<gsl::span<double> > split_view(double* data_pt) const{
-
     const int tot_r= num_regions();
     std::vector< gsl::span<double> > groupv(tot_r);
     for(int i=0; i<tot_r; i++){
@@ -108,7 +196,13 @@ public:
     }
     return groupv;
   }
-
+  Rcpp::IntegerVector export_object() const{
+    return Rcpp::wrap(ret_v);
+  }
+  // template<typename T>
+  // void serialize (Archive& archive){
+  //   archive(ret_v);
+  // }
 };
 
 
@@ -141,23 +235,48 @@ public:
     prior(p),
     o_prior(p),
     o_beta(k){}
+  Result_obj(Rcpp::List obj):beta(obj["beta"]),
+			     pip(obj["pip"]),
+			     prior(obj["prior"]),
+			     o_prior(obj["o_prior"]),
+			     o_beta(obj["o_beta"]){}
 
 
-  gsl_vector *saved_beta_vec(){
-    return o_beta;// = gsl_vector_calloc(ncoef);
-  }
-  gsl_vector *saved_prior_vec(){
-    return o_prior;// = gsl_vector_calloc(p);
-  }
-  gsl_vector *prior_vec(){
-    return prior;
-  }
-  gsl_vector *pip_vec(){
-    return pip;
-  }
-  gsl_vector *beta_vec(){
-    return beta;
-  }
+
+  // gsl_vector *saved_beta_vec(){
+  //   return o_beta;// = gsl_vector_calloc(ncoef);
+  // }
+  // gsl_vector *saved_prior_vec(){
+  //   return o_prior;// = gsl_vector_calloc(p);
+  // }
+  // gsl_vector *prior_vec(){
+  //   return prior;
+  // }
+  // gsl_vector *pip_vec(){
+  //   return pip;
+  // }
+  // gsl_vector *beta_vec(){
+  //   return beta;
+  // }
+  // template<class Archive>
+  // void serialize(Archive & archive){
+  //   archive(beta,pip,prior,o_prior,o_beta);
+  // }
+
+
+
+
+
+  // Rcpp::List export_object() const{
+  //   using namespace Rcpp;
+
+  //   return List::create(_["beta"]=beta,
+  // 		 _["pip"]=pip,
+  // 		 _["prior"]=prior,
+  // 		 _["o_prior"]=o_prior,
+  // 		 _["o_beta"]=o_beta);
+  // }
+
 };
 
 
@@ -168,22 +287,30 @@ public:
 
 
 class controller {
-  const splitter &split;
+  splitter split;
   
 public:
-  gsl_vector *saved_beta_vec;// = gsl_vector_calloc(ncoef);
-  gsl_vector *saved_prior_vec;// = gsl_vector_calloc(p);
-  gsl_vector *prior_vec;
-  gsl_vector *pip_vec;
-  gsl_vector *beta_vec;
+
+  RcppGSL::vector<double> saved_beta_vec;// = gsl_vector_calloc(ncoef);
+  RcppGSL::vector<double> saved_prior_vec;// = gsl_vector_calloc(p);
+  RcppGSL::vector<double> prior_vec;
+  RcppGSL::vector<double> pip_vec;
+  RcppGSL::vector<double> beta_vec;
 
 
-  controller(const splitter &split_,Result_obj &obj):split(split_),
-						     saved_beta_vec(obj.saved_beta_vec()),
-						     saved_prior_vec(obj.saved_prior_vec()),
-						     prior_vec(obj.prior_vec()),
-						     pip_vec(obj.pip_vec()),
-						     beta_vec(obj.beta_vec())
+  controller(const splitter &split_,Result_obj &obj,RcppGSL::matrix<int> anno_mat,double EM_thresh_=0.05,double init_pi1_=1e-3,int print_avg_=0):
+    split(split_),
+    saved_beta_vec(obj.o_beta),
+    saved_prior_vec(obj.o_prior),
+    prior_vec(obj.prior),
+    pip_vec(obj.pip),
+    beta_vec(obj.beta),
+    EM_thresh(EM_thresh_),
+    init_pi1(init_pi1_),
+    print_avg(print_avg_),
+    dlevel(anno_mat.ncol()),
+    Xd(anno_mat)
+
   {
     p=kd= 0;
     force_logistic = 0;
@@ -193,9 +320,6 @@ public:
     init_pi1 = 1e-3;
     print_avg = 0;
   }
-
-
-
 
 
   // storage
@@ -208,7 +332,6 @@ public:
   int kd; // number of discrete covariate
 
   std::vector<double> log10_BF;
-
   std::vector<double> estvec;
   std::vector<double> low_vec;
   std::vector<double> high_vec;
@@ -217,8 +340,8 @@ public:
   std::vector<std::string> dvar_name_vec;
 
   double EM_thresh;
-  gsl_vector_int *dlevel; // (kd+1) entry levels of each factor
-  gsl_matrix_int *Xd; // p x kd
+  RcppGSL::vector<int> dlevel; // (kd+1) entry levels of each factor
+  RcppGSL::matrix<int> Xd; // p x kd
 
   int ncoef;
 
@@ -229,6 +352,11 @@ public:
   int finish_em;
 
   int print_avg;
+  int force_logistic;
+  int single_fuzzy_annot;
+
+  double l1_lambda, l2_lambda; //shrinkage for enrich param est
+
 
   void load_data_R(Rcpp::NumericVector z_hat);
   void load_annotations_R(RcppGSL::matrix<int> anno_mat ,std::vector<std::string> names);
@@ -238,15 +366,15 @@ public:
   void simple_regression();
   void single_ct_regression();
   void single_probt_est();
-  int force_logistic;
-  int single_fuzzy_annot;
-  
-  double l1_lambda, l2_lambda; //shrinkage for enrich param est
-
-
   void init_params();
-    
   void run_EM(const bool use_glmnet);
+
+  // template<typename T>
+  // void serialize(T & archive){
+
+  //   archive(saved_beta_vec,// = gsl_vector_calloc(ncoef);
+  // 	    saved_prior_vec,prior_vec,pip_vec,beta_vec,)
+
 
   Rcpp::DataFrame estimate(bool use_glmnet);
 
@@ -255,7 +383,7 @@ public:
   double fine_optimize_beta(int index, double est, double null_log10_lik, double &curr_log10_lik);
   
 
-};
+  };
 
 
 
@@ -267,4 +395,7 @@ bool   rank_by_fdr (const Locus & loc1 , const Locus & loc2);
   
 int classify_dist_bin(int snp_pos, int tss, double bin_size = -1);
 double map_bin_2_dist(int bin, double bin_size=-1);
+
+
+}
 #endif

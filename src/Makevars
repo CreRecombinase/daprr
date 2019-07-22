@@ -1,8 +1,0 @@
-# set by configure
-CXX_STD = CXX17
-GSL_CFLAGS = -I/usr/include
-GSL_LIBS   = -L/usr/lib -lgsl -lgslcblas -lm
-
-# combine with standard arguments for R
-PKG_CPPFLAGS = -g $(GSL_CFLAGS) -I../inst/include
-PKG_LIBS = $(GSL_LIBS) 

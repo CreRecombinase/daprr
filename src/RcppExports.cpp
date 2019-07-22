@@ -7,20 +7,6 @@
 
 using namespace Rcpp;
 
-// logit_glmnet
-Rcpp::NumericMatrix logit_glmnet(Eigen::MatrixXd X, std::vector<double> y, double alpha, Rcpp::NumericVector lambda);
-RcppExport SEXP _daprcpp_logit_glmnet(SEXP XSEXP, SEXP ySEXP, SEXP alphaSEXP, SEXP lambdaSEXP) {
-BEGIN_RCPP
-    Rcpp::RObject rcpp_result_gen;
-    Rcpp::RNGScope rcpp_rngScope_gen;
-    Rcpp::traits::input_parameter< Eigen::MatrixXd >::type X(XSEXP);
-    Rcpp::traits::input_parameter< std::vector<double> >::type y(ySEXP);
-    Rcpp::traits::input_parameter< double >::type alpha(alphaSEXP);
-    Rcpp::traits::input_parameter< Rcpp::NumericVector >::type lambda(lambdaSEXP);
-    rcpp_result_gen = Rcpp::wrap(logit_glmnet(X, y, alpha, lambda));
-    return rcpp_result_gen;
-END_RCPP
-}
 // make_matrix
 Rcpp::List make_matrix(const size_t p, Rcpp::DataFrame anno_df);
 RcppExport SEXP _daprcpp_make_matrix(SEXP pSEXP, SEXP anno_dfSEXP) {
@@ -30,30 +16,6 @@ BEGIN_RCPP
     Rcpp::traits::input_parameter< const size_t >::type p(pSEXP);
     Rcpp::traits::input_parameter< Rcpp::DataFrame >::type anno_df(anno_dfSEXP);
     rcpp_result_gen = Rcpp::wrap(make_matrix(p, anno_df));
-    return rcpp_result_gen;
-END_RCPP
-}
-// make_matrix_df
-Rcpp::List make_matrix_df(const size_t p, Rcpp::DataFrame anno_df);
-RcppExport SEXP _daprcpp_make_matrix_df(SEXP pSEXP, SEXP anno_dfSEXP) {
-BEGIN_RCPP
-    Rcpp::RObject rcpp_result_gen;
-    Rcpp::RNGScope rcpp_rngScope_gen;
-    Rcpp::traits::input_parameter< const size_t >::type p(pSEXP);
-    Rcpp::traits::input_parameter< Rcpp::DataFrame >::type anno_df(anno_dfSEXP);
-    rcpp_result_gen = Rcpp::wrap(make_matrix_df(p, anno_df));
-    return rcpp_result_gen;
-END_RCPP
-}
-// make_spmatrix_df
-Rcpp::List make_spmatrix_df(const size_t p, Rcpp::DataFrame anno_df);
-RcppExport SEXP _daprcpp_make_spmatrix_df(SEXP pSEXP, SEXP anno_dfSEXP) {
-BEGIN_RCPP
-    Rcpp::RObject rcpp_result_gen;
-    Rcpp::RNGScope rcpp_rngScope_gen;
-    Rcpp::traits::input_parameter< const size_t >::type p(pSEXP);
-    Rcpp::traits::input_parameter< Rcpp::DataFrame >::type anno_df(anno_dfSEXP);
-    rcpp_result_gen = Rcpp::wrap(make_spmatrix_df(p, anno_df));
     return rcpp_result_gen;
 END_RCPP
 }
@@ -90,42 +52,14 @@ BEGIN_RCPP
     return rcpp_result_gen;
 END_RCPP
 }
-// logit_torus
-RcppGSL::vector<double> logit_torus(RcppGSL::matrix<int> X, RcppGSL::vector<double> y, double lambdaL1, double lambdaL2);
-RcppExport SEXP _daprcpp_logit_torus(SEXP XSEXP, SEXP ySEXP, SEXP lambdaL1SEXP, SEXP lambdaL2SEXP) {
-BEGIN_RCPP
-    Rcpp::RObject rcpp_result_gen;
-    Rcpp::RNGScope rcpp_rngScope_gen;
-    Rcpp::traits::input_parameter< RcppGSL::matrix<int> >::type X(XSEXP);
-    Rcpp::traits::input_parameter< RcppGSL::vector<double> >::type y(ySEXP);
-    Rcpp::traits::input_parameter< double >::type lambdaL1(lambdaL1SEXP);
-    Rcpp::traits::input_parameter< double >::type lambdaL2(lambdaL2SEXP);
-    rcpp_result_gen = Rcpp::wrap(logit_torus(X, y, lambdaL1, lambdaL2));
-    return rcpp_result_gen;
-END_RCPP
-}
-// logit_qbinom
-RcppGSL::vector<double> logit_qbinom(RcppGSL::matrix<int> X, RcppGSL::vector<double> y);
-RcppExport SEXP _daprcpp_logit_qbinom(SEXP XSEXP, SEXP ySEXP) {
-BEGIN_RCPP
-    Rcpp::RObject rcpp_result_gen;
-    Rcpp::RNGScope rcpp_rngScope_gen;
-    Rcpp::traits::input_parameter< RcppGSL::matrix<int> >::type X(XSEXP);
-    Rcpp::traits::input_parameter< RcppGSL::vector<double> >::type y(ySEXP);
-    rcpp_result_gen = Rcpp::wrap(logit_qbinom(X, y));
-    return rcpp_result_gen;
-END_RCPP
-}
+
+RcppExport SEXP run_testthat_tests();
 
 static const R_CallMethodDef CallEntries[] = {
-    {"_daprcpp_logit_glmnet", (DL_FUNC) &_daprcpp_logit_glmnet, 4},
     {"_daprcpp_make_matrix", (DL_FUNC) &_daprcpp_make_matrix, 2},
-    {"_daprcpp_make_matrix_df", (DL_FUNC) &_daprcpp_make_matrix_df, 2},
-    {"_daprcpp_make_spmatrix_df", (DL_FUNC) &_daprcpp_make_spmatrix_df, 2},
     {"_daprcpp_torus", (DL_FUNC) &_daprcpp_torus, 7},
     {"_daprcpp_torus_df", (DL_FUNC) &_daprcpp_torus_df, 6},
-    {"_daprcpp_logit_torus", (DL_FUNC) &_daprcpp_logit_torus, 4},
-    {"_daprcpp_logit_qbinom", (DL_FUNC) &_daprcpp_logit_qbinom, 2},
+    {"run_testthat_tests", (DL_FUNC) &run_testthat_tests, 0},
     {NULL, NULL, 0}
 };
 

@@ -1,5 +1,6 @@
 #include <glmnet.hpp>
-
+#include "classdef.hpp"
+namespace elasticdonut {
 
 double prior_to_pip(gsl::span<double> pip,const gsl::span<double> prior,const bool fix_pi0=true){
 
@@ -83,7 +84,7 @@ class GroupedView{
 public:
   SplitView r_view;
   gsl::span<double> d_view;
-  GroupedView(const splitter &splt_,
+  GroupedView(const donut::splitter &splt_,
 	      double* BF_p, const size_t p):r_view(splt_.split_view(BF_p)),
 					    d_view(BF_p,p){}
 
@@ -95,7 +96,7 @@ public:
 //SumStatRegion is a non-owning view of the summary statistics
 class SumStatRegion{
 public:
-  const splitter& splt;
+  const donut::splitter& splt;
   const GroupedView BF;
 private:
   const size_t num_reg;
@@ -108,7 +109,7 @@ private:
   mutable std::vector<std::optional<double>> BF_max;
 
 public:
-  SumStatRegion(const splitter &splt_,
+  SumStatRegion(const donut::splitter &splt_,
 		double*	BF_p,const size_t p):splt(splt_),
 					     BF(splt,BF_p,p),
 					     num_reg(splt_.num_regions())
@@ -129,13 +130,13 @@ public:
 
 
 
-double estimate_torus_sp(gsl::span<double> beta,GroupedView pip_v,GroupedView prior_v,const splitter& splt,const gsl::span<double> BF,const SparseMatrix<double> &X,const double EM_thresh=0.05){
+  double estimate_torus_sp(gsl::span<double> beta,GroupedView pip_v,GroupedView prior_v,const donut::splitter& splt,const gsl::span<double> BF,const Eigen::SparseMatrix<double> &X,const double EM_thresh=0.05){
 
   SumStatRegion sumstats(splt,BF.data(),prior_v.d_view.size());
   auto &pip_r = pip_v.r_view;
   auto &prior_r = prior_v.r_view;
   auto &prior =  prior_v.d_view;
-  Lognet<SparseMatrix<double>> logistic(X);
+  Lognet<Eigen::SparseMatrix<double>> logistic(X);
   logistic.predict(beta,prior);
   int iter_ct=0;
   int iter_max=20;
@@ -231,7 +232,7 @@ double fine_optimize_beta(double& curr_log10_lik,const gsl::span<double> beta,co
 }
 
 
-using namespace Eigen;
+
 
 //
 // template<typename T>
@@ -333,24 +334,25 @@ using namespace Eigen;
 // }
 
 
+// 
+// Rcpp::NumericMatrix logit_glmnet(Eigen::MatrixXd X,std::vector<double> y,double alpha=0,Rcpp::NumericVector lambda=Rcpp::NumericVector::create(0)){
+// 
+//   const size_t npar = X.cols()+1;
+//   const size_t nlambda=lambda.size();
+//   Lognet<Eigen::MatrixXd> logit(X,alpha,Rcpp::as<std::vector<double> >(lambda));
+//   Rcpp::NumericMatrix beta_m(npar,nlambda);
+// 
+//   double *yp = y.data();
+//   const size_t ys = y.size();
+//   Rcpp::Rcerr<<yp<<std::endl;
+//   gsl::span<double> yd(yp,ys);
+// 
+//   logit.fit(yd);
+//   for(int i=0; i<nlambda; i++){
+//     gsl::span<double> beta(&beta_m(0,i),npar);
+//     logit.read_coeffs(beta);
+//   }
+//   return(beta_m);
+// }
 
-//[[Rcpp::export]]
-Rcpp::NumericMatrix logit_glmnet(Eigen::MatrixXd X,std::vector<double> y,double alpha=0,Rcpp::NumericVector lambda=Rcpp::NumericVector::create(0)){
-
-  const size_t npar = X.cols()+1;
-  const size_t nlambda=lambda.size();
-  Lognet<Eigen::MatrixXd> logit(X,alpha,Rcpp::as<std::vector<double> >(lambda));
-  Rcpp::NumericMatrix beta_m(npar,nlambda);
-
-  double *yp = y.data();
-  const size_t ys = y.size();
-  Rcpp::Rcerr<<yp<<std::endl;
-  gsl::span<double> yd(yp,ys);
-
-  logit.fit(yd);
-  for(int i=0; i<nlambda; i++){
-    gsl::span<double> beta(&beta_m(0,i),npar);
-    logit.read_coeffs(beta);
-  }
-  return(beta_m);
 }
