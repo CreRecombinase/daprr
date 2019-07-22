@@ -5,11 +5,3 @@ make_matrix <- function(p, anno_df) {
     .Call(`_daprcpp_make_matrix`, p, anno_df)
 }
 
-torus <- function(locus_id, z_hat, anno_mat, names, prior = FALSE, do_verbose = FALSE, use_glmnet = TRUE) {
-    .Call(`_daprcpp_torus`, locus_id, z_hat, anno_mat, names, prior, do_verbose, use_glmnet)
-}
-
-torus_df <- function(locus_id, z_hat, anno_df, prior = FALSE, do_verbose = FALSE, use_glmnet = TRUE) {
-    .Call(`_daprcpp_torus_df`, locus_id, z_hat, anno_df, prior, do_verbose, use_glmnet)
-}
-

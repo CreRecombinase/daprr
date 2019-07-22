@@ -4,6 +4,7 @@
 .Ruserdata
 inst/dap-master/torus_src/torus
 inst/dap-master/torus_src/*o
+src/Makevars
 autom4te.cache/*
 inst/dap-master/dap_src/.*
 inst/dap-master/dap_src/torus
