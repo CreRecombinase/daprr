@@ -162,6 +162,9 @@ forward_select_fun <- function(f,params,combo_fun,extract_terms,steps=1L,ret_all
     all_fit <- furrr::future_map(term_selection,db_fun)
     all_results[[i]] <- all_fit
     lik_vec <- map_dbl(all_fit,~.x$df$lik)
+    if(length(lik_vec)==0){
+      break
+    }
     best_fit <- all_fit[[which.max(lik_vec)]]
     best_terms <- extract_terms(best_fit)
     stopifnot(all(best_terms %in% params))

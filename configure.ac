@@ -21,6 +21,12 @@ fi
 # Now substitute these variables in src/Makevars.in to create src/Makevars
 AC_SUBST(GSL_CFLAGS)
 AC_SUBST(GSL_LIBS)
+
+: ${R_HOME=`R RHOME`}
+if test -z "${R_HOME}"; then
+  echo "could not determine R_HOME"
+  exit 1
+fi
 ##AC_SUBST(RCPP_LDFLAGS)
 
 make -C inst/dap-master/torus_src
