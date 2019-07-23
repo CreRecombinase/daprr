@@ -191,11 +191,9 @@ forward_select_fun <- function(f,params,combo_fun,extract_terms,steps=1L,ret_all
 #' @export
 #'
 #' @examples
-fs_torus <- function(gwas_df,full_anno_df,steps=1L,p_cutoff=1,torus_p=character(0)){
+fs_torus <- function(gf,p,full_anno_df,steps=1L,p_cutoff=1,torus_p=character(0)){
   
   params <- unique(full_anno_df$feature)
-  p <- nrow(gwas_df)
-  gf <- write_gwas(gwas_df = gwas_df)
   torus_f <- purrr::partial(run_torus_cmd,gf=gf)
   
   combo_fun <- function(params){
@@ -212,12 +210,6 @@ fs_torus <- function(gwas_df,full_anno_df,steps=1L,p_cutoff=1,torus_p=character(
   
   taf <- combo_fun(final_terms)
   final_ret <- run_torus_cmd(gf=gf,af = taf,torus_p = torus_p)
-  if(length(torus_p)>0){
-    stopifnot(!is.null(final_ret$priors))
-    sgw_df <- dplyr::filter(gwas_df,region_id %in% torus_p) %>% 
-      split(.$region_id)
-  final_ret$priors <- purrr::map(torus_p,~dplyr::inner_join(sgw_df[[.x]],final_ret$priors[[.x]]))
-  }
 
   return(final_ret)
 }
