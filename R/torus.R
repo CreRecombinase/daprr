@@ -84,7 +84,7 @@ run_torus_cmd <- function(gf,af,torus_p=character(0)){
       "-est"
     )
   }
-  res <- processx::run(torus_path,args = res_args,echo_cmd = TRUE)
+  res <- processx::run(torus_path,args = res_args,echo_cmd = TRUE,echo = TRUE)
   df <- read.table(file = textConnection(res$stdout),skip=1,header=F,stringsAsFactors = F)
   colnames(df) <- c("term", "estimate", "low", "high")
   
