@@ -1,6 +1,4 @@
-#ifndef __CLASSDEF_H_
-#define __CLASSDEF_H_
-
+#pragma once
 #include <RcppGSL.h>
 #include <stdlib.h>
 #include <string>
@@ -398,4 +396,3 @@ double map_bin_2_dist(int bin, double bin_size=-1);
 
 
 }
-#endif

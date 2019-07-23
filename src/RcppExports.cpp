@@ -9,7 +9,7 @@ using namespace Rcpp;
 
 // make_matrix
 Rcpp::List make_matrix(const size_t p, Rcpp::DataFrame anno_df);
-RcppExport SEXP _daprcpp_make_matrix(SEXP pSEXP, SEXP anno_dfSEXP) {
+RcppExport SEXP _daprcpptest_make_matrix(SEXP pSEXP, SEXP anno_dfSEXP) {
 BEGIN_RCPP
     Rcpp::RObject rcpp_result_gen;
     Rcpp::RNGScope rcpp_rngScope_gen;
@@ -19,9 +19,9 @@ BEGIN_RCPP
     return rcpp_result_gen;
 END_RCPP
 }
-// torus
-Rcpp::List torus(Rcpp::IntegerVector locus_id, Rcpp::NumericVector z_hat, RcppGSL::matrix<int> anno_mat, Rcpp::StringVector names, const bool prior, const bool do_verbose, bool use_glmnet);
-RcppExport SEXP _daprcpp_torus(SEXP locus_idSEXP, SEXP z_hatSEXP, SEXP anno_matSEXP, SEXP namesSEXP, SEXP priorSEXP, SEXP do_verboseSEXP, SEXP use_glmnetSEXP) {
+// run_torus
+Rcpp::List run_torus(Rcpp::IntegerVector locus_id, Rcpp::NumericVector z_hat, RcppGSL::matrix<int> anno_mat, Rcpp::StringVector names, const bool prior, const bool do_verbose, bool use_glmnet);
+RcppExport SEXP _daprcpptest_run_torus(SEXP locus_idSEXP, SEXP z_hatSEXP, SEXP anno_matSEXP, SEXP namesSEXP, SEXP priorSEXP, SEXP do_verboseSEXP, SEXP use_glmnetSEXP) {
 BEGIN_RCPP
     Rcpp::RObject rcpp_result_gen;
     Rcpp::RNGScope rcpp_rngScope_gen;
@@ -32,13 +32,13 @@ BEGIN_RCPP
     Rcpp::traits::input_parameter< const bool >::type prior(priorSEXP);
     Rcpp::traits::input_parameter< const bool >::type do_verbose(do_verboseSEXP);
     Rcpp::traits::input_parameter< bool >::type use_glmnet(use_glmnetSEXP);
-    rcpp_result_gen = Rcpp::wrap(torus(locus_id, z_hat, anno_mat, names, prior, do_verbose, use_glmnet));
+    rcpp_result_gen = Rcpp::wrap(run_torus(locus_id, z_hat, anno_mat, names, prior, do_verbose, use_glmnet));
     return rcpp_result_gen;
 END_RCPP
 }
 // torus_df
 Rcpp::List torus_df(Rcpp::IntegerVector locus_id, Rcpp::NumericVector z_hat, Rcpp::DataFrame anno_df, const bool prior, const bool do_verbose, bool use_glmnet);
-RcppExport SEXP _daprcpp_torus_df(SEXP locus_idSEXP, SEXP z_hatSEXP, SEXP anno_dfSEXP, SEXP priorSEXP, SEXP do_verboseSEXP, SEXP use_glmnetSEXP) {
+RcppExport SEXP _daprcpptest_torus_df(SEXP locus_idSEXP, SEXP z_hatSEXP, SEXP anno_dfSEXP, SEXP priorSEXP, SEXP do_verboseSEXP, SEXP use_glmnetSEXP) {
 BEGIN_RCPP
     Rcpp::RObject rcpp_result_gen;
     Rcpp::RNGScope rcpp_rngScope_gen;
@@ -52,18 +52,27 @@ BEGIN_RCPP
     return rcpp_result_gen;
 END_RCPP
 }
-
-RcppExport SEXP run_testthat_tests();
+// dap_torus
+std::string dap_torus(std::vector<std::string> argv);
+RcppExport SEXP _daprcpptest_dap_torus(SEXP argvSEXP) {
+BEGIN_RCPP
+    Rcpp::RObject rcpp_result_gen;
+    Rcpp::RNGScope rcpp_rngScope_gen;
+    Rcpp::traits::input_parameter< std::vector<std::string> >::type argv(argvSEXP);
+    rcpp_result_gen = Rcpp::wrap(dap_torus(argv));
+    return rcpp_result_gen;
+END_RCPP
+}
 
 static const R_CallMethodDef CallEntries[] = {
-    {"_daprcpp_make_matrix", (DL_FUNC) &_daprcpp_make_matrix, 2},
-    {"_daprcpp_torus", (DL_FUNC) &_daprcpp_torus, 7},
-    {"_daprcpp_torus_df", (DL_FUNC) &_daprcpp_torus_df, 6},
-    {"run_testthat_tests", (DL_FUNC) &run_testthat_tests, 0},
+    {"_daprcpptest_make_matrix", (DL_FUNC) &_daprcpptest_make_matrix, 2},
+    {"_daprcpptest_run_torus", (DL_FUNC) &_daprcpptest_run_torus, 7},
+    {"_daprcpptest_torus_df", (DL_FUNC) &_daprcpptest_torus_df, 6},
+    {"_daprcpptest_dap_torus", (DL_FUNC) &_daprcpptest_dap_torus, 1},
     {NULL, NULL, 0}
 };
 
-RcppExport void R_init_daprcpp(DllInfo *dll) {
+RcppExport void R_init_daprcpptest(DllInfo *dll) {
     R_registerRoutines(dll, NULL, CallEntries, NULL, NULL);
     R_useDynamicSymbols(dll, FALSE);
 }

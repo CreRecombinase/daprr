@@ -1,3 +1,5 @@
-useDynLib(daprcpp, .registration=TRUE)
+useDynLib(daprcpptest, .registration=TRUE)
 exportPattern("^[[:alpha:]]+")
 importFrom(Rcpp, evalCpp)
+importFrom(magrittr,"%>%")
+export("%>%")

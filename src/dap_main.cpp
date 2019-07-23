@@ -5,22 +5,13 @@
 namespace torus {
 
 
-void show_banner(){
-
-  fprintf(stderr, "\n\nTORUS: QTL Discovery Utilizing Genomic Annotations\n\n");
-  fprintf(stderr, "Usage: torus -est|qtl|dump_prior  -d input_data.gz [-smap snp_map.gz] [-gmap gene_map.gz] [-annot annotation_file.gz] [--load_bf | --load_zval]\n\n");
-  
-
-
-}
-
-
 
 controller cont_wrapper(const std::string gwas_file, const std::string annotation_file){
   int force_logistic = 0;
   int prob_annot = 0;
 
   int data_format = 1;
+  std::stringstream buff_o;
 
   double EM_thresh = 0.05;
   double dist_bin_size = -1;
@@ -32,7 +23,7 @@ controller cont_wrapper(const std::string gwas_file, const std::string annotatio
 
   double init_pi1 = 1e-3;
 
-  controller con;
+  controller con(buff_o);
   con.EM_thresh = EM_thresh;
 
   if(dist_bin_size > 0){

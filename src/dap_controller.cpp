@@ -13,6 +13,8 @@
 #include <sys/stat.h>
 #include <sys/types.h>
 #include <errno.h>
+#include <fmt/printf.h>
+
 
 namespace torus {
 
@@ -1056,6 +1058,7 @@ void controller::find_eGene(double fdr_thresh){
       rej_decision = 0;
     }
     printf("%5d  %20s    %9.3e    %d\n",int(rej), locVec[i].id.c_str(), locVec[i].fdr,rej_decision);
+    buf_o<<fmt::sprintf("%5d  %20s    %9.3e    %d\n",int(rej), locVec[i].id.c_str(), locVec[i].fdr,rej_decision);
     rej++;
     if(rej_decision == 1){
       rej_count++;
@@ -1116,6 +1119,7 @@ void controller::estimate(){
   
   double sd = fabs(est)/sqrt(2*diff);
   printf("\n%25s  %9.3f     %9.3f  %9.3f\n", "Intercept", est, est-1.96*sd, est+1.96*sd);
+  buf_o<<fmt::sprintf("\n%25s  %9.3f     %9.3f  %9.3f\n", "Intercept", est, est-1.96*sd, est+1.96*sd);
   gsl_vector_memcpy(beta_vec, saved_beta_vec);
   gsl_vector_memcpy(prior_vec, saved_prior_vec);
 
@@ -1174,6 +1178,7 @@ void controller::estimate(){
       }
       double sd = fabs(est)/sqrt(2*diff);
       printf("%25s  %9.3f     %9.3f  %9.3f\n", label.c_str(), est, est-1.96*sd, est+1.96*sd);
+      buf_o<<fmt::sprintf("%25s  %9.3f     %9.3f  %9.3f\n", label.c_str(), est, est-1.96*sd, est+1.96*sd);
       index++;
       // restore
       gsl_vector_memcpy(beta_vec, saved_beta_vec);  
@@ -1217,6 +1222,7 @@ void controller::estimate(){
     }
     double sd = fabs(est)/sqrt(2*diff);
     printf("%25s  %9.3f     %9.3f  %9.3f\n", label.c_str(), est, est-1.96*sd, est+1.96*sd);
+    buf_o<<fmt::sprintf("%25s  %9.3f     %9.3f  %9.3f\n", label.c_str(), est, est-1.96*sd, est+1.96*sd);
     index++;
   }
   

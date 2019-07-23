@@ -1,8 +1,18 @@
 library(testthat)
-library(daprcpp)
+library(daprcpptest)
 context("utils")
 
 
+test_that("works like cmd",{
+  
+  gf <- system.file("gwas_z_t.txt.gz",package = "daprcpp")
+  af <- system.file("gwas_anno_t.txt.gz",package = "daprcpp")
+  
+  ret <- daprcpp::run_torus_cmd(gf,af)
+  
+  nret <- daprcpptest::test_torus_cmd(gf,af)
+  expect_equal(tidyr::unnest(nret$df),tidyr::unnest(ret$df))
+})
 # test_that("R quasibinomial logit regression works like dap",{
 #   
 #   n <- 30

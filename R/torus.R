@@ -80,6 +80,67 @@ run_torus_cmd <- function(gf,af,torus_p=character(0)){
 
 
 
+test_torus_cmd <- function(gf,af,torus_p=character(0)){
+  torus_path <- system.file("dap-master/torus_src/torus",package = "daprcpp")
+  stopifnot(file.exists(torus_path),torus_path!="")
+  fo <- fs::file_info(torus_path)
+  stopifnot((fo$permissions & "u+x") == "u+x")
+  torus_d <- fs::file_temp()
+  lik_file <- fs::file_temp()
+  if(length(torus_p)>0){
+    p_f <- fs::path(torus_d,torus_p,ext="prior")
+    stopifnot(!fs::dir_exists(torus_d))
+    res_args <- c(
+      "-d",
+      fs::path_expand(gf),
+      "-annot",
+      fs::path_expand(af),
+      "--load_zval",
+      "-lik",
+      lik_file,
+      "-est",
+      "-dump_prior",
+      torus_d)
+  } else{
+    res_args <- c(
+      "-d",
+      fs::path_expand(gf),
+      "-annot",
+      fs::path_expand(af),
+      "--load_zval",
+      "-lik",
+      lik_file,
+      "-est"
+    )
+  }
+  res <- dap_torus(res_args)
+  df <- read.table(file = textConnection(nret),skip=1,header=F,stringsAsFactors = F)
+  colnames(df) <- c("term", "estimate", "low", "high")
+  
+  df <- dplyr::mutate(df,term=stringr::str_replace(term,pattern = "\\.[0-9]+$",replacement = ""),
+                      sd=(low-estimate)/(-1.96),z=estimate/sd,p=pnorm(abs(z),lower.tail = FALSE))
+  lik <- scan(lik_file,what=numeric())
+  file.remove(lik_file)
+  df <- tidyr::nest(df) %>% dplyr::mutate(lik=lik)
+  if(length(torus_p)>0){
+    stopifnot(all(fs::file_exists(p_f)))
+    prior_l <- map(torus_p,function(x){
+      fp <- as.character(fs::path(torus_d,x,ext="prior"))
+      suppressMessages(
+        ret <- vroom::vroom(file = fp,delim = "  ",trim_ws = T,col_names = c("SNP","prior"),col_types = cols("SNP"="i","prior"="d")) %>% mutate(region_id=x)
+      )
+      return(ret)
+    })
+    fs::file_delete(p_f)
+    names(prior_l) <- torus_p
+    return(list(df=df,priors=prior_l))
+  }else{
+    return(list(df=df))
+  }
+}
+
+
+
 
 
 coef.torus <- function(fit){

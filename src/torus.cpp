@@ -1,5 +1,6 @@
 #include <RcppGSL.h>
 #include "classdef.hpp"
+#include "dap_classdef.hpp"
 #include "logistic.hpp"
 #include <RcppEigen.h>
 
@@ -210,7 +211,7 @@ Rcpp::List make_matrix(const size_t p,Rcpp::DataFrame anno_df){
 
 
 // [[Rcpp::export]]
-Rcpp::List torus(Rcpp::IntegerVector locus_id, Rcpp::NumericVector z_hat,RcppGSL::matrix<int> anno_mat,Rcpp::StringVector names,const bool prior=false,const bool do_verbose=false,bool use_glmnet=true){
+Rcpp::List run_torus(Rcpp::IntegerVector locus_id, Rcpp::NumericVector z_hat,RcppGSL::matrix<int> anno_mat,Rcpp::StringVector names,const bool prior=false,const bool do_verbose=false,bool use_glmnet=true){
 
 
     if(!do_verbose){
@@ -263,7 +264,7 @@ Rcpp::List torus_df(Rcpp::IntegerVector locus_id, Rcpp::NumericVector z_hat,Rcpp
 
     auto anno_mat = spdf.getMat();
     auto names = spdf.names();
-    return torus(locus_id,z_hat,anno_mat,names,prior,do_verbose,use_glmnet);
+    return run_torus(locus_id,z_hat,anno_mat,names,prior,do_verbose,use_glmnet);
 }
 
 
@@ -287,15 +288,17 @@ RcppGSL::vector<double>	logit_donut(RcppGSL::matrix<int> X,RcppGSL::vector<doubl
 
 
 
+
   //[[Rcpp::export]]
-int dap_torus(Rcpp::StringVector argv){
-  using namespace torus;
+std::string dap_torus(std::vector<std::string> argv){
+
   int argc=argv.size();
 
   // creating the grid
 
   //olist.push_back(0.1);
   //phlist.push_back(0.05);
+  std::stringstream buff_o;
 
   char data_file[256];
   char gmap_file[256];
@@ -303,7 +306,7 @@ int dap_torus(Rcpp::StringVector argv){
   char annot_file[256];
   char prior_dir[256];
   char output_pip[256];
-
+  char lik_file[256];
   int csize = -1;
   int gsize = -1;
   int nthread = 1;
@@ -326,6 +329,7 @@ int dap_torus(Rcpp::StringVector argv){
   double init_pi1 = 1e-3;
 
   char ci_file[256];
+  memset(lik_file,0,256);
   memset(ci_file,0,256);
   memset(data_file,0,256);
   memset(gmap_file,0,256);
@@ -347,86 +351,90 @@ int dap_torus(Rcpp::StringVector argv){
 
   for(int i=0;i<argc;i++){
 
-    if(strcmp(argv[i], "-d")==0 || strcmp(argv[i], "-data")==0){
-      strcpy(data_file,argv[++i]);
+    if(strcmp(argv[i].c_str(), "-d")==0 || strcmp(argv[i].c_str(), "-data")==0){
+      strcpy(data_file,argv[++i].c_str());
       continue;
     }
 
 
 
-    if(strcmp(argv[i], "-gmap")==0){
-      strcpy(gmap_file,argv[++i]);
+    if(strcmp(argv[i].c_str(), "-gmap")==0){
+      strcpy(gmap_file,argv[++i].c_str());
       continue;
     }
 
 
-    if(strcmp(argv[i], "-smap")==0 ){
-      strcpy(smap_file,argv[++i]);
+    if(strcmp(argv[i].c_str(), "-smap")==0 ){
+      strcpy(smap_file,argv[++i].c_str());
+      continue;
+    }
+
+    if(strcmp(argv[i].c_str(), "-lik")==0){
+      strcpy(lik_file,argv[++i].c_str());
+      continue;
+    }
+
+    if(strcmp(argv[i].c_str(), "-annot")==0 ){
+      strcpy(annot_file,argv[++i].c_str());
+      continue;
+    }
+
+    if(strcmp(argv[i].c_str(), "-t")==0 || strcmp(argv[i].c_str(), "-thresh")==0){
+      EM_thresh = atof(argv[++i].c_str());
+      continue;
+    }
+
+    if(strcmp(argv[i].c_str(), "-l1_lambda")==0){
+      l1_lambda = atof(argv[++i].c_str());
+      continue;
+    }
+
+    if(strcmp(argv[i].c_str(), "-l2_lambda")==0){
+      l2_lambda = atof(argv[++i].c_str());
       continue;
     }
 
 
-    if(strcmp(argv[i], "-annot")==0 ){
-      strcpy(annot_file,argv[++i]);
-      continue;
-    }
-
-    if(strcmp(argv[i], "-t")==0 || strcmp(argv[i], "-thresh")==0){
-      EM_thresh = atof(argv[++i]);
-      continue;
-    }
-
-    if(strcmp(argv[i], "-l1_lambda")==0){
-      l1_lambda = atof(argv[++i]);
-      continue;
-    }
-
-    if(strcmp(argv[i], "-l2_lambda")==0){
-      l2_lambda = atof(argv[++i]);
-      continue;
-    }
-
-
-    if(strcmp(argv[i], "--single_fuzzy_annot")==0){
+    if(strcmp(argv[i].c_str(), "--single_fuzzy_annot")==0){
       prob_annot = 1;
       continue;
     }
 
 
-    if(strcmp(argv[i], "-init_pi1")==0){
-      init_pi1 = atof(argv[++i]);
+    if(strcmp(argv[i].c_str(), "-init_pi1")==0){
+      init_pi1 = atof(argv[++i].c_str());
       continue;
     }
 
 
-    if(strcmp(argv[i], "--force_logistic")==0){
+    if(strcmp(argv[i].c_str(), "--force_logistic")==0){
       force_logistic = 1;
       continue;
     }
 
-    if(strcmp(argv[i], "--load_bf")==0 || strcmp(argv[i], "--bf")==0 ){
+    if(strcmp(argv[i].c_str(), "--load_bf")==0 || strcmp(argv[i].c_str(), "--bf")==0 ){
       data_format = 2;
       continue;
     }
 
 
-    if(strcmp(argv[i], "--load_zval")==0 || strcmp(argv[i], "--zval")==0){
+    if(strcmp(argv[i].c_str(), "--load_zval")==0 || strcmp(argv[i].c_str(), "--zval")==0){
       data_format = 3;
       continue;
     }
 
 
-    if(strcmp(argv[i], "--load_fastqtl")==0 || strcmp(argv[i], "--fastqtl")==0){
+    if(strcmp(argv[i].c_str(), "--load_fastqtl")==0 || strcmp(argv[i].c_str(), "--fastqtl")==0){
       data_format = 4;
       continue;
     }
 
-    if(strcmp(argv[i], "--load_matrixeqtl")==0 || strcmp(argv[i], "--matrixeqtl")==0){
+    if(strcmp(argv[i].c_str(), "--load_matrixeqtl")==0 || strcmp(argv[i].c_str(), "--matrixeqtl")==0){
       data_format = 1;
       continue;
     }
 
-    if(strcmp(argv[i], "--no_dtss") == 0) {
+    if(strcmp(argv[i].c_str(), "--no_dtss") == 0) {
       fastqtl_use_dtss = 0;
       continue;
     }
@@ -435,55 +443,55 @@ int dap_torus(Rcpp::StringVector argv){
 
 
 
-    if(strcmp(argv[i], "-dist_bin_size") == 0){
-      dist_bin_size = atof(argv[++i]);
+    if(strcmp(argv[i].c_str(), "-dist_bin_size") == 0){
+      dist_bin_size = atof(argv[++i].c_str());
       continue;
     }
 
 
-    if(strcmp(argv[i], "-est")==0){
+    if(strcmp(argv[i].c_str(), "-est")==0){
       est = 1;
       continue;
     }
 
 
-    if(strcmp(argv[i], "-egene")==0 || strcmp(argv[i], "-qtl")==0 ){
+    if(strcmp(argv[i].c_str(), "-egene")==0 || strcmp(argv[i].c_str(), "-qtl")==0 ){
       find_egene = 1;
       continue;
     }
 
-    if(strcmp(argv[i], "-dump_prior")==0){
-      strcpy(prior_dir, argv[++i]);
+    if(strcmp(argv[i].c_str(), "-dump_prior")==0){
+      strcpy(prior_dir, argv[++i].c_str());
       continue;
     }
 
-    if(strcmp(argv[i], "-dump_pip")==0){
-      strcpy(output_pip, argv[++i]);
-      continue;
-    }
-
-
-    if(strcmp(argv[i], "-h")==0 || strcmp(argv[i], "-help")==0 ){
-      show_banner();
+    if(strcmp(argv[i].c_str(), "-dump_pip")==0){
+      strcpy(output_pip, argv[++i].c_str());
       continue;
     }
 
 
-    if(strcmp(argv[i], "--print_avg")==0 ){
+    if(strcmp(argv[i].c_str(), "-h")==0 || strcmp(argv[i].c_str(), "-help")==0 ){
+      torus::show_banner();
+      continue;
+    }
+
+
+    if(strcmp(argv[i].c_str(), "--print_avg")==0 ){
       print_avg = 1;
       continue;
     }
 
 
-    if(strcmp(argv[i], "-alpha")==0){
-      alpha = atof(argv[++i]);
+    if(strcmp(argv[i].c_str(), "-alpha")==0){
+      alpha = atof(argv[++i].c_str());
       continue;
     }
 
 
-    fprintf(stderr, "Error: undefined option %s\n", argv[i]);
-    show_banner();
-    exit(0);
+    fprintf(stderr, "Error: undefined option %s\n", argv[i].c_str());
+    torus::show_banner();
+    Rcpp::stop("Error: undefined option "+argv[i]);
 
   }
 
@@ -492,13 +500,14 @@ int dap_torus(Rcpp::StringVector argv){
   // checking mandatory arguments
   if(strlen(data_file)==0){
     fprintf(stderr,"Error: data file unspecified\n");
-    show_banner();
-    exit(0);
+
+    torus::show_banner();
+    Rcpp::stop("Error: data file unspecified\n");
   }
 
 
   // a global variable
-  controller con;
+  torus::controller con(buff_o);
   con.EM_thresh = EM_thresh;
 
   if(dist_bin_size > 0){
@@ -570,5 +579,11 @@ int dap_torus(Rcpp::StringVector argv){
     con.dump_pip(output_pip);
   }
 
-  return 0;
+  if(strlen(lik_file)>0){
+    std::string filename = lik_file;
+    std::ofstream ostrm(filename);
+    ostrm << con.final_log10_lik<<std::endl;
+  }
+
+  return con.buf_o.str();
 }
