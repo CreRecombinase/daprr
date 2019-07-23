@@ -157,7 +157,7 @@ forward_select_fun <- function(f,params,combo_fun,extract_terms,steps=1L,paralle
   best_terms <- init_params
   rest_terms <- params[!params %in% best_terms]
 
-  purrr::map(rest_terms,~c(.x,best_terms))
+  term_selection <- purrr::map(rest_terms,~c(.x,best_terms))
 #  all_results <- list()
   
   db_fun <- function(ts){
@@ -206,7 +206,7 @@ fs_torus <- function(gf,p,full_anno_df,steps=1L,p_cutoff=1,torus_p=character(0),
   
   params <- unique(full_anno_df$feature)
   torus_f <- purrr::partial(run_torus_cmd,gf=gf)
-  stopifnot(all(init_terms %in% full_anno_df$term))
+  stopifnot(all(init_terms %in% full_anno_df$feature))
   
   combo_fun <- function(params){
     write_anno(anno_df = dplyr::filter(full_anno_df,feature %in% params),p = p)  
