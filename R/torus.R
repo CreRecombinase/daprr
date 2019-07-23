@@ -150,7 +150,7 @@ coef.torus <- function(fit){
 forward_select_fun <- function(f,params,combo_fun,extract_terms,steps=1L,ret_all=FALSE){
   
   rest_terms <- params
-  term_selection <- list(character())
+  term_selection <- as.list(rest_terms)
   all_results <- list()
   
   db_fun <- function(ts){
@@ -158,7 +158,7 @@ forward_select_fun <- function(f,params,combo_fun,extract_terms,steps=1L,ret_all
     f(init_d)
   }
   
-  for(i in seq_len(steps+1L)){
+  for(i in seq_len(steps)){
     all_fit <- furrr::future_map(term_selection,db_fun)
     all_results[[i]] <- all_fit
     lik_vec <- map_dbl(all_fit,~.x$df$lik)
