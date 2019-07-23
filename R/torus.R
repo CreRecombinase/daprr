@@ -69,7 +69,6 @@ run_torus_cmd <- function(gf,af,torus_p=character(0)){
       "--load_zval",
       "-lik",
       lik_file,
-      "-est",
       "-dump_prior",
       torus_d)
   } else{
@@ -80,8 +79,7 @@ run_torus_cmd <- function(gf,af,torus_p=character(0)){
       fs::path_expand(af),
       "--load_zval",
       "-lik",
-      lik_file,
-      "-est"
+      lik_file
     )
   }
   res <- processx::run(torus_path,args = res_args,echo_cmd = TRUE,echo = TRUE)
