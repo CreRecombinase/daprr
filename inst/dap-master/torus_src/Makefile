@@ -1,7 +1,7 @@
 GSL_LIBS := $(shell gsl-config --libs)
 GSL_INC := $(shell gsl-config --cflags)
-CXX := "x86_64-conda_cos6-linux-gnu-c++"
-CXX11STD := "-std=gnu++11"
+CXX := $(shell R CMD config CXX)
+CXX11STD := $(shell R CMD config CXX11STD)
 main: main.o controller.o logistic.o 
 	$(CXX)  $(CXX11STD) -O3 main.o controller.o logistic.o  $(GSL_LIBS)   -lboost_iostreams -lz  -o torus
 static: main.o controller.o logistic.o
