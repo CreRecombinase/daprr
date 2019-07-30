@@ -58,6 +58,8 @@ write_gwas <- function(gwas_df,gf=tempfile(fileext=".txt.gz")){
 run_torus_cmd <- function(gf,af,torus_p=character(0)){
   torus_path <- system.file("dap-master/torus_src/torus",package = "daprcpp")
   stopifnot(file.exists(torus_path),torus_path!="")
+  stopifnot(file.exists(gf),
+            file.exists(af))
   fo <- fs::file_info(torus_path)
   stopifnot((fo$permissions & "u+x") == "u+x")
   torus_d <- fs::file_temp()
@@ -130,6 +132,9 @@ coef.torus <- function(fit){
   names(retvec) <- ret$term
   return(retvec)
 }
+
+
+
 
 
 
