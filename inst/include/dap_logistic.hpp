@@ -40,7 +40,10 @@ int logistic_cat_fit(gsl_vector *beta  // Vector of parameters length = 1 + Sum_
 		     ,gsl_vector_int *nlev // Vector with number categories
 		     ,gsl_vector *y //Vector of prob. to predict
 		     ,double lambdaL1 // Regularization L1 0.0 if not used
-		     ,double lambdaL2); // Regularization L2 0.0 if not used
+		     ,double lambdaL2,
+		     const int maxiter=100,
+		     const double tol=1e-4
+		     const ); // Regularization L2 0.0 if not used
 
 double fLogit_cat(gsl_vector *beta
 		  ,gsl_matrix_int *X

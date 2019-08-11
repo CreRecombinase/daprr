@@ -8,11 +8,10 @@
 
 #include <gsl/gsl_vector.h>
 #include <gsl/gsl_matrix.h>
-
-
+#include <string.h>
+#include "io.hpp"
 
 namespace torus {
-
 
 
   inline  void show_banner(){
@@ -69,6 +68,11 @@ namespace torus {
   
     Locus(std::string locus_id,  std::vector<SNP> & snpVec_){ id = locus_id;  snpVec = snpVec_; prior_vec = pip_vec =0;  };
     Locus(){};
+    std::vector<double>	get_BF()const;
+    std::vector<double>	get_prior()const;
+    std::vector<double>	get_pip()const;
+
+
 
   
     void EM_update();
@@ -82,11 +86,33 @@ namespace torus {
 
 
 
-  class controller {
 
+
+  class controller {
   public:
-    std::stringstream &buf_o;
-    controller(std::stringstream &obuf):buf_o(obuf){
+    std::stringstream buf_o;
+    controller(const std::string gwas_file, const std::string annotation_file,const double EM_thresh_=0.05)
+        : buf_o() {
+      p = kc = kd = dist_bin_level = 0;
+      EM_thresh=EM_thresh_;
+      force_logistic = 0;
+      dist_bin_size = -1;
+      fastqtl_use_dtss = 0;
+      dist_bin = 0;
+      finish_em = 0;
+      single_fuzzy_annot = 0;
+      l1_lambda = l2_lambda = 0;
+      init_pi1 = 1e-3;
+      print_avg = 0;
+
+      FileZscoreParser zsp(gwas_file.c_str());
+      load_data_zscore(zsp);
+      FileAnnotationParser ap(snp_hash, annotation_file.c_str());
+      load_annotation(ap);
+      init_params();
+    }
+
+      controller(const double EM_thresh_=0.05):buf_o(){
       p=kc=kd=dist_bin_level = 0;
       force_logistic = 0;
       dist_bin_size = -1;
@@ -104,10 +130,8 @@ namespace torus {
   
 
     int p; // number of loc-SNP pairs
-  
     int kc; // number of continuous covariate
     int kd; // number of discrete covariate
-
 
     double dist_bin_size;
 
@@ -118,8 +142,6 @@ namespace torus {
     std::vector<std::string> dvar_name_vec;
 
 
-
-  
     gsl_vector_int *dist_bin;
     std::map<int, int> dtss_map;
     std::map<int, int> dtss_rmap;
@@ -152,14 +174,9 @@ namespace torus {
     int print_avg;
 
 
-    void load_data(char *filename);    // load data with MatrixeQTL format -- default
-    void load_data_zscore(const char *filename); // load data with z-score/t-score
-    void load_data_BF(char *filename); // load data with pre-computed log10 Bayes factors
-    void load_data_fastqtl(char *filename); //load data with fastQTL format
+    void load_data_zscore(ZscoreParser &zsp); // load data with z-score/t-scoer
 
-
-    void load_map(char *gene_map_file, char *snp_map_file);
-    void load_annotation(const char *annot_file);
+    void load_annotation(AnnotationParser &ap);
     int count_factor_level(int col);
   
     void simple_regression();
@@ -179,8 +196,8 @@ namespace torus {
   
     void find_eGene(double thresh=0.05);
     void estimate();
-    void dump_prior(char *path);
-    void dump_pip(char *file);
+    void dump_prior(const char *path);
+    void dump_pip(const char *file);
 
 
   private:

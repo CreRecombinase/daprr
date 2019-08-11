@@ -8,107 +8,20 @@
 #include <unordered_map>
 #include "gsl/span"
 
-
 #include <gsl/gsl_vector.h>
 #include <gsl/gsl_matrix.h>
 
 extern bool verbose;
 
-template<class Archive>
-void save(Archive & archive,
-	  RcppGSL::matrix<int> const & m){
+namespace elasticdonut {
 
-  Rcpp::IntegerMatrix rm = Rcpp::wrap(m);
-  archive(rm);
+  double prior_to_pip(gsl::span<double> pip,const gsl::span<double> prior,const bool fix_pi0=true);
 
+  void transform_pip(gsl::span<double> pip,const gsl::span<double> BF,const double log10lik);
+  double log10_lik(const double locus_pi0,const gsl::span<double> BF, const gsl::span<double> pip,std::optional<double> &BF_max);
+  double E_step(gsl::span<double> pip,const gsl::span<double> BF, const gsl::span<double> prior,std::optional<double> &BF_max);
+  double fdr(double log10lik,const gsl::span<double> BF, const gsl::span<double> prior,gsl::span<double> pip,std::optional<double> &BF_max);
 }
-
-
-template<class Archive>
-void save(Archive & archive,
-	  RcppGSL::vector<double> const & m){
-
-  Rcpp::NumericVector rm = Rcpp::wrap(m);
-  archive(rm);
-}
-
-
-
-
-template<class Archive>
-void save(Archive & archive,
-	  RcppGSL::matrix<double> const & m){
-
-  Rcpp::NumericMatrix rm = Rcpp::wrap(m);
-  archive(rm);
-
-}
-
-
-template<class Archive>
-void save(Archive & archive,
-	  RcppGSL::vector<int> const & m){
-
-  Rcpp::IntegerVector rm = Rcpp::wrap(m);
-  archive(rm);
-}
-
-
-
-///////
-
-
-template<class Archive>
-void load(Archive & archive,
-	  RcppGSL::matrix<int> & m){
-
-  Rcpp::IntegerMatrix rm;
-  archive(rm);
-  m = Rcpp::as<RcppGSL::matrix<int> >(rm);
-
-}
-
-
-template<class Archive>
-void load(Archive & archive,
-	  RcppGSL::vector<double> & m){
-
-  Rcpp::NumericVector rm;
-  archive(rm);
-  m = Rcpp::as<RcppGSL::vector<double> >(rm);
-
-}
-
-
-
-
-template<class Archive>
-void load(Archive & archive,
-	  RcppGSL::matrix<double> & m){
-  Rcpp::NumericMatrix rm;
-  archive(rm);
-  m = Rcpp::as<RcppGSL::matrix<double> >(rm);
-
-
-}
-
-
-template<class Archive>
-void load(Archive & archive,
-	  RcppGSL::vector<int> & m){
-
-  Rcpp::IntegerVector rm;
-  archive(rm);
-  m = Rcpp::as<RcppGSL::vector<int> >(rm);
-}
-
-
-
-
-
-
-
-
 
 
 namespace donut {
@@ -123,10 +36,21 @@ class BF{
 
 public:
   BF();
+  double operator()(const double z_score) const{
+    return(this->compute_log10_BF(z_score));
+  }
   double compute_log10_BF(const double z_score) const;
 };
 
 
+
+  inline  std::vector<double> make_BF(const gsl::span<double> z_hat){
+    std::vector<double> BFv(z_hat.size());
+    BF bf;
+    std::transform(z_hat.begin(),z_hat.end(),BFv.begin(),[&bf](double z){
+							   return(bf.compute_log10_BF(z));});
+    return BFv;
+  }
 
 class SNP {
 
@@ -238,43 +162,6 @@ public:
 			     prior(obj["prior"]),
 			     o_prior(obj["o_prior"]),
 			     o_beta(obj["o_beta"]){}
-
-
-
-  // gsl_vector *saved_beta_vec(){
-  //   return o_beta;// = gsl_vector_calloc(ncoef);
-  // }
-  // gsl_vector *saved_prior_vec(){
-  //   return o_prior;// = gsl_vector_calloc(p);
-  // }
-  // gsl_vector *prior_vec(){
-  //   return prior;
-  // }
-  // gsl_vector *pip_vec(){
-  //   return pip;
-  // }
-  // gsl_vector *beta_vec(){
-  //   return beta;
-  // }
-  // template<class Archive>
-  // void serialize(Archive & archive){
-  //   archive(beta,pip,prior,o_prior,o_beta);
-  // }
-
-
-
-
-
-  // Rcpp::List export_object() const{
-  //   using namespace Rcpp;
-
-  //   return List::create(_["beta"]=beta,
-  // 		 _["pip"]=pip,
-  // 		 _["prior"]=prior,
-  // 		 _["o_prior"]=o_prior,
-  // 		 _["o_beta"]=o_beta);
-  // }
-
 };
 
 

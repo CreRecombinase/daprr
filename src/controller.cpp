@@ -17,6 +17,11 @@
 namespace donut{
 
 
+bool rank_by_fdr (const Locus & loc1 , const Locus & loc2){
+  return (loc1.fdr < loc2.fdr);
+}
+
+
 BF::BF():wt(1/4.0),
 	 l10(log(10)){
   kv={1,4,16,25};
@@ -613,9 +618,7 @@ double log10_weighted_sum(std::vector<double> &vec, std::vector<double> &wts){
   return (max+log10(sum));
 }
 
-bool rank_by_fdr (const Locus & loc1 , const Locus & loc2){
-  return (loc1.fdr < loc2.fdr);
-}
+
 
 
 }

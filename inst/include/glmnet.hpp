@@ -158,8 +158,6 @@ extern "C" void F77_SUB(lognet) (double *parm,
 class comp_coeff{
   int p;
   int nlam;
-
-
 public:
   comp_coeff(const int nlam_, const int p_,const bool zero=true):
   p(p_),
@@ -204,6 +202,13 @@ public:
   Eigen::MatrixXd retcoeff;
   int lmu;
 };
+
+
+
+// template<typename T>
+// class Logdap{
+//   Logdap(const T &X_, const double alpha_=0,std::vector<double> lambda= {0},const double thresh=1e-07,const int maxiter=100000):
+
 
 template<typename T>
 class Lognet{
@@ -271,6 +276,9 @@ public:
   void read_coeffs(gsl::span<double> beta,int index=0);
   void predict(const gsl::span<double> beta,gsl::span<double> y)const;
 };
+
+
+
 
 
 

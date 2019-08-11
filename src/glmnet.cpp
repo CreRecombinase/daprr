@@ -2,7 +2,7 @@
 #include "classdef.hpp"
 namespace elasticdonut {
 
-double prior_to_pip(gsl::span<double> pip,const gsl::span<double> prior,const bool fix_pi0=true){
+double prior_to_pip(gsl::span<double> pip,const gsl::span<double> prior,const bool fix_pi0){
 
   double locus_pi0=1;
   std::transform(prior.begin(),prior.end(),pip.begin(),[&locus_pi0](double prior){
@@ -91,8 +91,6 @@ public:
 };
 
 
-
-
 //SumStatRegion is a non-owning view of the summary statistics
 class SumStatRegion{
 public:
@@ -100,12 +98,6 @@ public:
   const GroupedView BF;
 private:
   const size_t num_reg;
-  // SplitView r_prior;
-  // gsl::span<double> prior;
-  // SplitView r_pip;
-  // gsl::span<double> pip;
-  // const SplitView r_BF;
-  // const gsl::span<double> BF;
   mutable std::vector<std::optional<double>> BF_max;
 
 public:
@@ -129,32 +121,29 @@ public:
 };
 
 
+  template<typename T>
+  double fit_torus(gsl::span<double> beta,GroupedView pip_v,GroupedView prior_v,const donut::splitter& splt,const gsl::span<double> BF,const T &X,const double EM_thresh=0.05,const double alpha=0,const std::vector<double> lambda={0}){
 
-  double estimate_torus_sp(gsl::span<double> beta,GroupedView pip_v,GroupedView prior_v,const donut::splitter& splt,const gsl::span<double> BF,const Eigen::SparseMatrix<double> &X,const double EM_thresh=0.05){
-
-  SumStatRegion sumstats(splt,BF.data(),prior_v.d_view.size());
-  auto &pip_r = pip_v.r_view;
-  auto &prior_r = prior_v.r_view;
-  auto &prior =  prior_v.d_view;
-  Lognet<Eigen::SparseMatrix<double>> logistic(X);
-  logistic.predict(beta,prior);
-  int iter_ct=0;
-  int iter_max=20;
-  double last_log10_lik = -9999999;
-  double curr_log10_lik = 0;
-  while(iter_ct<iter_max && fabs(curr_log10_lik-last_log10_lik)>EM_thresh){
-    last_log10_lik=curr_log10_lik;
-    curr_log10_lik=sumstats.E_steps(pip_r,prior_r);
-     logistic.fit(prior);
-     logistic.read_coeffs(beta);
-     //     lnm.read_coeffs(beta,0);
-     //    logistic.fit(beta,prior);
+    SumStatRegion sumstats(splt,BF.data(),prior_v.d_view.size());
+    auto &pip_r = pip_v.r_view;
+    auto &prior_r = prior_v.r_view;
+    auto &prior =  prior_v.d_view;
+    Lognet<T> logistic(X,alpha,lambda);
     logistic.predict(beta,prior);
+    int iter_ct=0;
+    int iter_max=20;
+    double last_log10_lik = -9999999;
+    double curr_log10_lik = 0;
+    while (iter_ct < iter_max &&
+           fabs(curr_log10_lik - last_log10_lik) > EM_thresh) {
+      last_log10_lik = curr_log10_lik;
+      curr_log10_lik = sumstats.E_steps(pip_r, prior_r);
+      logistic.fit(prior);
+      logistic.read_coeffs(beta);
+      logistic.predict(beta, prior);
+    }
+    return curr_log10_lik;
   }
-  return curr_log10_lik;
-}
-
-
 
 template<typename T>
 double evaluate_likelihood(GroupedView &pip,GroupedView &prior, const gsl::span<double> beta,SumStatRegion sumstats,const Lognet<T> &logistic){
@@ -174,7 +163,6 @@ double estimate_torus_null(const gsl::span<double> beta,const size_t index ,SumS
   double null_log10_lik = sumstats.E_steps(null_pip.r_view,null_prior.r_view);
   return null_log10_lik;
 }
-
 
 
 template<typename T>
@@ -232,25 +220,6 @@ double fine_optimize_beta(double& curr_log10_lik,const gsl::span<double> beta,co
 }
 
 
-
-
-//
-// template<typename T>
-// Rcpp::List estimate_torus_glmnet(const gsl::span<int> region_id,const gsl::span<double>	z_hat, const T X,
-
-
-    // update_prior(const gsl::span<double> beta){
-    // for(int i = 0; i < X->size1; ++i) {
-    //   double Xbetai=beta->data[0];
-    //   int iParm=1;
-    //   for(int k = 0; k < X->size2; ++k) {
-    // 	if(gsl_matrix_int_get(X,i,k)>0)
-    // 	  Xbetai+=beta->data[gsl_matrix_int_get(X,i,k)-1+iParm];
-    // 	iParm+=nlev->data[k]-1;
-    //   }
-    //   yhat->data[i]=1/(1 + gsl_sf_exp(-Xbetai));
-    // }
-
 // template<typename Matrix>
 // void fit_torus_glmnet(gsl::span<double> beta,const Matrix X,SumStatRegion &ssr){
 
@@ -273,7 +242,7 @@ double fine_optimize_beta(double& curr_log10_lik,const gsl::span<double> beta,co
 //       if(verbose){
 // 	Rcpp::Rcerr<<"simple"<<std::endl;
 //       }
-//       simple_regression();
+//       torus::simple_regression();
 //     }
 //     // only categrical annotations
 //     else if(kd!=0){
@@ -332,6 +301,22 @@ double fine_optimize_beta(double& curr_log10_lik,const gsl::span<double> beta,co
 //   }
 
 // }
+
+
+
+template<typename T>
+Rcpp::List torus_glmnet(const gsl::span<int> region_id,const gsl::span<double> z_hat, Eigen::MatrixXd X,const gsl::span<double> BF,const double alpha=0,const Rcpp::NumericVector lambda=Rcpp::NumericVector::create(0)){
+
+  auto BF_vec =	donut::make_BF(z_hat);
+  using namespace Rcpp;
+  auto lvec = as<std::vector<double>>(lambda);
+  auto split = donut::make_splitter(region_id.begin(),region_id.end());
+  NumericVector beta(X.cols()+1);
+  auto beta_s =	as<gsl::span<double>>(beta);
+  return(Rcpp::List::create(Rcpp::NumericVector::create()));
+
+}
+
 
 
 // 

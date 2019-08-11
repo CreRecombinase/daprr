@@ -10,6 +10,26 @@ write_anno <- function(anno_df=tibble(SNP=integer(),feature=character()),p=max(m
 }
 
 
+#' Title
+#'
+#' @param s 
+#' @param lik 
+#'
+#' @return
+#' @export
+#'
+#' @examples
+parse_torus_s <- function(s,lik) {
+    df <- read.table(file = textConnection(s),skip=1,header=F,stringsAsFactors = F)
+    colnames(df) <- c("term", "estimate", "low", "high")
+
+    df <- dplyr::mutate(df,term=stringr::str_replace(term,pattern = "\\.[0-9]+$",replacement = ""),
+                        sd=(low-estimate)/(-1.96),z=estimate/sd,p=pnorm(abs(z),lower.tail = FALSE))
+    # lik <- scan(lik_file,what=numeric())
+    # file.remove(lik_file)
+    df <- tidyr::nest(df) %>% dplyr::mutate(lik=lik)
+}
+
 write_gwas <- function(gwas_df,gf=tempfile(fileext=".txt.gz")){
   
   dplyr::select(gwas_df,SNP,region_id,`z-stat`) %>% write_tsv(path=gf)
@@ -17,7 +37,37 @@ write_gwas <- function(gwas_df,gf=tempfile(fileext=".txt.gz")){
 }
 
 
-
+gen_torus_cmd <- function(gf,af,torus_p=character(0)){
+  torus_d <- fs::file_temp()
+  lik_file <- fs::file_temp()
+  if(length(torus_p)>0){
+    p_f <- fs::path(torus_d,torus_p,ext="prior")
+    stopifnot(!fs::dir_exists(torus_d))
+    res_args <- c(
+      "-d",
+      fs::path_expand(gf),
+      "-annot",
+      fs::path_expand(af),
+      "--load_zval",
+      "-lik",
+      lik_file,
+      "-est",
+      "-dump_prior",
+      torus_d)
+  } else{
+    res_args <- c(
+      "-d",
+      fs::path_expand(gf),
+      "-annot",
+      fs::path_expand(af),
+      "--load_zval",
+      "-lik",
+      lik_file,
+      "-est"
+    )
+  }
+  return(res_args)
+}
 
 run_torus_cmd <- function(gf,af,torus_p=character(0)){
   torus_path <- system.file("dap-master/torus_src/torus",package = "daprcpp")
@@ -55,12 +105,12 @@ run_torus_cmd <- function(gf,af,torus_p=character(0)){
   res <- processx::run(torus_path,args = res_args,echo_cmd = TRUE)
   df <- read.table(file = textConnection(res$stdout),skip=1,header=F,stringsAsFactors = F)
   colnames(df) <- c("term", "estimate", "low", "high")
-  
+
   df <- dplyr::mutate(df,term=stringr::str_replace(term,pattern = "\\.[0-9]+$",replacement = ""),
                       sd=(low-estimate)/(-1.96),z=estimate/sd,p=pnorm(abs(z),lower.tail = FALSE))
   lik <- scan(lik_file,what=numeric())
   file.remove(lik_file)
-  df <- nest(df) %>% mutate(lik=lik)
+  df <- tidyr::nest(df) %>% mutate(lik=lik)
   if(length(torus_p)>0){
     stopifnot(all(fs::file_exists(p_f)))
     prior_l <- map(torus_p,function(x){

@@ -7,6 +7,17 @@
 
 using namespace Rcpp;
 
+// z_to_BF
+Rcpp::NumericVector z_to_BF(Rcpp::NumericVector z_hat);
+RcppExport SEXP _daprcpptest_z_to_BF(SEXP z_hatSEXP) {
+BEGIN_RCPP
+    Rcpp::RObject rcpp_result_gen;
+    Rcpp::RNGScope rcpp_rngScope_gen;
+    Rcpp::traits::input_parameter< Rcpp::NumericVector >::type z_hat(z_hatSEXP);
+    rcpp_result_gen = Rcpp::wrap(z_to_BF(z_hat));
+    return rcpp_result_gen;
+END_RCPP
+}
 // make_matrix
 Rcpp::List make_matrix(const size_t p, Rcpp::DataFrame anno_df);
 RcppExport SEXP _daprcpptest_make_matrix(SEXP pSEXP, SEXP anno_dfSEXP) {
@@ -53,7 +64,7 @@ BEGIN_RCPP
 END_RCPP
 }
 // dap_torus
-std::string dap_torus(std::vector<std::string> argv);
+Rcpp::List dap_torus(std::vector<std::string> argv);
 RcppExport SEXP _daprcpptest_dap_torus(SEXP argvSEXP) {
 BEGIN_RCPP
     Rcpp::RObject rcpp_result_gen;
@@ -64,11 +75,15 @@ BEGIN_RCPP
 END_RCPP
 }
 
+RcppExport SEXP run_testthat_tests();
+
 static const R_CallMethodDef CallEntries[] = {
+    {"_daprcpptest_z_to_BF", (DL_FUNC) &_daprcpptest_z_to_BF, 1},
     {"_daprcpptest_make_matrix", (DL_FUNC) &_daprcpptest_make_matrix, 2},
     {"_daprcpptest_run_torus", (DL_FUNC) &_daprcpptest_run_torus, 7},
     {"_daprcpptest_torus_df", (DL_FUNC) &_daprcpptest_torus_df, 6},
     {"_daprcpptest_dap_torus", (DL_FUNC) &_daprcpptest_dap_torus, 1},
+    {"run_testthat_tests", (DL_FUNC) &run_testthat_tests, 0},
     {NULL, NULL, 0}
 };
 

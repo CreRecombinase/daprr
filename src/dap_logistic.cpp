@@ -480,7 +480,7 @@ int logistic_cat_fit(gsl_vector *beta
 		     ,gsl_vector_int *nlev
 		     ,gsl_vector *y
 		     ,double lambdaL1
-		     ,double lambdaL2)
+		     ,double lambdaL2,const int maxiter,const double tol)
 {
   double mLogLik=0;
   fix_parm_cat_T p;
@@ -507,7 +507,7 @@ int logistic_cat_fit(gsl_vector *beta
   gsl_vector *myG = gsl_vector_alloc(npar); /* Gradient*/
   gsl_vector *tau = gsl_vector_alloc(npar); /* tau for QR*/
 
-  for(iter=0;iter<100;iter++){ 
+  for(iter=0;iter<maxiter;iter++){
     wgsl_cat_optim_hessian(beta,&p,myH); //Calculate Hessian
     wgsl_cat_optim_df(beta,&p,myG);      //Calculate Gradient
     gsl_linalg_QR_decomp(myH,tau);   //Calculate next beta
@@ -525,7 +525,7 @@ int logistic_cat_fit(gsl_vector *beta
     //fprintf(stderr,"#iter %d, -log(Lik(0))=%lf,%lf\n",(int)iter,mLogLik,maxchange);
 #endif //_RPR_DEBUG
 
-    if(maxchange<1E-4)
+    if(maxchange<tol)
       break;
   }
 

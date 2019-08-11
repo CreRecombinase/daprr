@@ -1,279 +1,22 @@
 #include "dap_classdef.hpp"
-#include <iostream>
-#include <fstream>
-#include <sstream>
-#include <string.h>
+#include "io.hpp"
 #include <math.h>
 #include <gsl/gsl_rng.h>
 #include <gsl/gsl_randist.h>
-#include <boost/iostreams/copy.hpp>
-#include <boost/iostreams/filter/gzip.hpp>
-#include <boost/iostreams/filtering_stream.hpp>
+
 #include "dap_logistic.hpp"
 #include <sys/stat.h>
 #include <sys/types.h>
 #include <errno.h>
 #include <fmt/printf.h>
+#include <fmt/format.h>
 
 
 namespace torus {
 
-void controller::load_data(char *filename){
-
-  
-
-  std::ifstream dfile(filename, std::ios_base::in | std::ios_base::binary);
-  boost::iostreams::filtering_istream in;
-
-  in.push(boost::iostreams::gzip_decompressor());
-  in.push(dfile);
-  
- 
-  std::string line;
-  std::istringstream ins;
-
-  std::string curr_loc_id = "";
-
-  std::vector<SNP> snp_vec;
-  std::string loc_id;
-  std::string snp_id;
-  double beta;
-  double se_beta;
-  double t_val;
-  int index_count = 0;
-  int loc_count = 0;
-  while(getline(in,line)){
-
-    ins.clear();
-    ins.str(line);
-
-    if(ins>>snp_id>>loc_id>>beta>>t_val){
-      
-      //printf("%s  %f\n", snp_id.c_str(), beta);
-      if(curr_loc_id != loc_id){
-	if(curr_loc_id != ""){
-	  
-	  if(loc_hash.find(curr_loc_id)== loc_hash.end()){
-	    Locus loc(curr_loc_id, snp_vec);
-	    int pos = loc_hash.size();
-	    loc_hash[curr_loc_id] = pos;
-	    locVec.push_back(loc);	  
-	    loc_count++;
-	  }else{
-	    // already defined, concate the existing snpVec
-	    int pos = loc_hash[curr_loc_id];
-	    for(int i=0;i<snp_vec.size();i++){
-	      locVec[pos].snpVec.push_back(snp_vec[i]);
-	    }	   
-	  }
-	  
-	  snp_vec.clear();
-	
-	}
-	curr_loc_id = loc_id;
-   
-      }
-      
-      se_beta = beta/t_val;
-      double log10_BF = compute_log10_BF(t_val);
-      SNP snp(snp_id, log10_BF, index_count);
-      index_count++;
-      snp_hash[snp_id] = 100;
-      snp_vec.push_back(snp);
-      
-    }
-  }
-   
-  dfile.close();
-
-  if(loc_hash.find(curr_loc_id)== loc_hash.end()){
-    Locus loc(curr_loc_id, snp_vec);
-    int pos = loc_hash.size();
-    loc_hash[curr_loc_id] = pos;
-    locVec.push_back(loc);
-    loc_count++;
-  }else{
-    // already defined, concate the existing snpVec                                               
-    int pos = loc_hash[curr_loc_id];
-    for(int i=0;i<snp_vec.size();i++){
-      locVec[pos].snpVec.push_back(snp_vec[i]);
-    }
-  }
-  
-  
- 
-  p = index_count;
-
-  fprintf(stderr, "Read in %d loci, %d locus-SNP pairs ... \n",loc_count, p);
-  
-  prior_vec = gsl_vector_calloc(p);
-
-}
-
-
-
-
-void controller::load_data_fastqtl(char *filename){
-  
-  // fastQTL file contains dtss info, automatically parse and use dtss in analysis
-  using namespace std;
-  ifstream dfile(filename, ios_base::in | ios_base::binary);
-  boost::iostreams::filtering_istream in;
-
-  in.push(boost::iostreams::gzip_decompressor());
-  in.push(dfile);
-
-
-  std::string line;
-  istringstream ins;
-
-  std::string curr_loc_id = "";
-
-  std::vector<SNP> snp_vec;
-  std::string loc_id;
-  std::string snp_id;
-  
-  double bhat;
-  double sdbeta;
-  double pval;
-  double dtss;
-  
-  int index_count = 0;
-  int loc_count = 0;
-
-  std::map<int, int> bin_hash;
-  
-
-  while(getline(in,line)){
-
-    ins.clear();
-    ins.str(line);
-
-    if(ins>> loc_id >> snp_id >> dtss >>pval >> bhat >> sdbeta){
-      //printf("%s  %f\n", snp_id.c_str(), beta);                                                         
-      if(curr_loc_id != loc_id){
-        if(curr_loc_id != ""){
-
-          if(loc_hash.find(curr_loc_id)== loc_hash.end()){
-            Locus loc(curr_loc_id, snp_vec);
-            int pos = loc_hash.size();
-            loc_hash[curr_loc_id] = pos;
-            locVec.push_back(loc);
-            loc_count++;
-          }else{
-            // already defined, concate the existing snpVec                                              
-            int pos = loc_hash[curr_loc_id];
-            for(int i=0;i<snp_vec.size();i++){
-              locVec[pos].snpVec.push_back(snp_vec[i]);
-            }
-          }
-
-          snp_vec.clear();
-
-        }
-        curr_loc_id = loc_id;
-
-      }
-      
-      double log10_BF = compute_log10_BF(bhat, sdbeta);
-      SNP snp(snp_id, log10_BF, index_count);
-
-      // handling dtss info
-      if(fastqtl_use_dtss){
-	int bin = classify_dist_bin(dtss, 0 , dist_bin_size);
-	if(bin_hash.find(bin)==bin_hash.end()){
-	  bin_hash[bin] = 0;
-	}
-	
-	bin_hash[bin]++;
-	snp.dtss_bin = bin;
-      }
-      
-      index_count++;
-      snp_hash[snp_id] = 100;
-      snp_vec.push_back(snp);
-      
-    }
-  }
-
-  dfile.close();
-
-  // record the last loc
-
-  if(loc_hash.find(curr_loc_id)== loc_hash.end()){
-    Locus loc(curr_loc_id, snp_vec);
-    int pos = loc_hash.size();
-    loc_hash[curr_loc_id] = pos;
-    locVec.push_back(loc);
-    loc_count++;
-  }else{
-    // already defined, concate the existing snpVec                                                       
-    int pos = loc_hash[curr_loc_id];
-    for(int i=0;i<snp_vec.size();i++){
-      locVec[pos].snpVec.push_back(snp_vec[i]);
-    }
-  }
-
-
-  p = index_count;
-
-  
-  if(fastqtl_use_dtss){
-    dtss_map[0] =0;
-    dtss_rmap[0] = 0;
-    int count = 1;
-  
-    dist_bin = gsl_vector_int_calloc(p);
-
-    // re-map bin number to skip empty bins
-    for (std::map<int,int>::iterator it=bin_hash.begin(); it!=bin_hash.end(); ++it){
-      if(it->first==0)
-	continue;
-      dtss_map[it->first] = count;
-      dtss_rmap[count] = it->first;
-      count++;
-    }
-    dist_bin_level = count;
-
-    for (int i=0;i<locVec.size();i++){
-    
-      for(int j=0;j<locVec[i].snpVec.size();j++){
-	string snp_id = locVec[i].snpVec[j].id;
-	gsl_vector_int_set(dist_bin,locVec[i].snpVec[j].index, dtss_map[locVec[i].snpVec[j].dtss_bin]);
-      }
-    }
-  }
-   
-
-  fprintf(stderr, "Read in %d loci, %d locus-SNP pairs ... \n",loc_count, p);
-
-  prior_vec = gsl_vector_calloc(p);
-
-
-
-}
-
-
-  
-
-
-
-
-
-void controller::load_data_zscore(const char *filename){
+  void controller::load_data_zscore(ZscoreParser &zsp){
 
   using namespace std;
-  
-  ifstream dfile(filename, ios_base::in | ios_base::binary);
-  boost::iostreams::filtering_istream in;
-
-  in.push(boost::iostreams::gzip_decompressor());
-  in.push(dfile);
-  
- 
-  std::string line;
-  istringstream ins;
-
   std::string curr_loc_id = "";
 
   std::vector<SNP> snp_vec;
@@ -282,50 +25,51 @@ void controller::load_data_zscore(const char *filename){
   double z_val;
   int index_count = 0;
   int loc_count = 0;
-  while(getline(in,line)){
 
-    ins.clear();
-    ins.str(line);
+  for(auto *line_tup = zsp.getline_s(); line_tup !=nullptr;line_tup=zsp.getline_s()){
+    snp_id = std::get<0>(*line_tup);
+    loc_id = std::get<1>(*line_tup);
+    z_val = std::get<2>(*line_tup);
 
-    if(ins>>snp_id>>loc_id>>z_val){
+    if(curr_loc_id != loc_id){
+      if(curr_loc_id != ""){
 
-      //printf("%s  %f\n", snp_id.c_str(), z_val);
-
-      if(curr_loc_id != loc_id){
-	if(curr_loc_id != ""){
-	  
-	  if(loc_hash.find(curr_loc_id)== loc_hash.end()){
-	    Locus loc(curr_loc_id, snp_vec);
-	    int pos = loc_hash.size();
-	    loc_hash[curr_loc_id] = pos;
-	    locVec.push_back(loc);	  
-	    loc_count++;
-	  }else{
-	    // already defined, concate the existing snpVec
-	    int pos = loc_hash[curr_loc_id];
-	    for(int i=0;i<snp_vec.size();i++){
-	      locVec[pos].snpVec.push_back(snp_vec[i]);
-	    }	   
+	if(loc_hash.find(curr_loc_id)== loc_hash.end()){
+	  Locus loc(curr_loc_id, snp_vec);
+	  int pos = loc_hash.size();
+	  loc_hash[curr_loc_id] = pos;
+	  locVec.push_back(loc);
+	  loc_count++;
+	}else{
+	  // already defined, concate the existing snpVec
+	  int pos = loc_hash[curr_loc_id];
+	  for(int i=0;i<snp_vec.size();i++){
+	    locVec[pos].snpVec.push_back(snp_vec[i]);
 	  }
-	  
-	  snp_vec.clear();
-	
 	}
-	curr_loc_id = loc_id;
-   
+
+	snp_vec.clear();
+	
       }
-      
-      double log10_BF = compute_log10_BF(z_val);
-      //printf("%15s   %7.3f\n", snp_id.c_str(), log10_BF);
-      SNP snp(snp_id, log10_BF, index_count);
-      index_count++;
-      snp_hash[snp_id] = 100;
-      snp_vec.push_back(snp);
-      
+      curr_loc_id = loc_id;
+
     }
+
+    double log10_BF = compute_log10_BF(z_val);
+    //printf("%15s   %7.3f\n", snp_id.c_str(), log10_BF);
+    SNP snp(snp_id, log10_BF, index_count);
+    snp_hash[snp_id] = index_count;
+    index_count++;
+    snp_vec.push_back(snp);
+
   }
+  // std::cerr<<"snps:"<<std::endl;
+  // for(auto &ip : snp_hash){
+  //   std::cerr<<ip.first<<"\t"<<ip.second<<std::endl;
+  // }
+
    
-  dfile.close();
+
 
   if(loc_hash.find(curr_loc_id)== loc_hash.end()){
     Locus loc(curr_loc_id, snp_vec);
@@ -353,332 +97,26 @@ void controller::load_data_zscore(const char *filename){
 
 
 
-
-
-
-// this function directly loads pre-computed log10 Bayes factors
-
-void controller::load_data_BF(char *filename){
+void controller::load_annotation(AnnotationParser &ap){
 
   using namespace std;
+  //  std::map<string, std::vector<double> > annot_map;
 
-  ifstream dfile(filename, ios_base::in | ios_base::binary);
-  boost::iostreams::filtering_istream in;
+  kc = ap.num_continuous();
+  kd = ap.num_discrete();
+  dvar_name_vec = ap.name_vec_d();
+  cvar_name_vec = ap.name_vec_c();
 
-  in.push(boost::iostreams::gzip_decompressor());
-  in.push(dfile);
-  
- 
-  std::string line;
-  istringstream ins;
-
-  std::string curr_loc_id = "";
-
-  std::vector<SNP> snp_vec;
-  std::string loc_id;
-  std::string snp_id;
-  double log10_BF;
-  int index_count = 0;
-  int loc_count = 0;
-  while(getline(in,line)){
-
-    ins.clear();
-    ins.str(line);
-
-    if(ins>>snp_id>>loc_id>>log10_BF){
-      
-      //printf("%s  %f\n", snp_id.c_str(), log10_BF);
-
-      if(curr_loc_id != loc_id){
-	if(curr_loc_id != ""){
-	  
-	  if(loc_hash.find(curr_loc_id)== loc_hash.end()){
-	    Locus loc(curr_loc_id, snp_vec);
-	    int pos = loc_hash.size();
-	    loc_hash[curr_loc_id] = pos;
-	    locVec.push_back(loc);	  
-	    loc_count++;
-	  }else{
-	    // already defined, concate the existing snpVec
-	    int pos = loc_hash[curr_loc_id];
-	    for(int i=0;i<snp_vec.size();i++){
-	      locVec[pos].snpVec.push_back(snp_vec[i]);
-	    }	   
-	  }
-	  
-	  snp_vec.clear();
-	
-	}
-	curr_loc_id = loc_id;
-   
-      }
-      
-      SNP snp(snp_id, log10_BF, index_count);
-      index_count++;
-      snp_hash[snp_id] = 100;
-      snp_vec.push_back(snp);
-      
-    }
-  }
-   
-  dfile.close();
-
-  if(loc_hash.find(curr_loc_id)== loc_hash.end()){
-    Locus loc(curr_loc_id, snp_vec);
-    int pos = loc_hash.size();
-    loc_hash[curr_loc_id] = pos;
-    locVec.push_back(loc);
-    loc_count++;
-  }else{
-    // already defined, concate the existing snpVec                                               
-    int pos = loc_hash[curr_loc_id];
-    for(int i=0;i<snp_vec.size();i++){
-      locVec[pos].snpVec.push_back(snp_vec[i]);
-    }
-  }
-  
-  
- 
-  p = index_count;
-
-  fprintf(stderr, "Read in %d loci, %d locus-SNP pairs ... \n",loc_count, p);
-  
-  prior_vec = gsl_vector_calloc(p);
-
-}
-
-
-
-
-
-
-
-
-void controller::load_map(char* gene_file, char *snp_file){
-
-  using namespace std;
-  if(fastqtl_use_dtss)
-    return;
-  
-  if(strlen(gene_file)==0 || strlen(snp_file)==0){
-    return;
-  }
-
-  
-
-  std::map<string, int> gene_map;
-  std::map<string, int> snp_map;
-
-  ifstream gfile(gene_file, ios_base::in | ios_base::binary);
-  boost::iostreams::filtering_istream in;
-
-  in.push(boost::iostreams::gzip_decompressor());
-  in.push(gfile);
-  
-
-  std::string line;
-  istringstream ins;
-
-  
-  std::string gene_id;
-  int chr;
-  double tss1;
-  double tss2;
-  while(getline(in,line)){
-
-    ins.clear();
-    ins.str(line);
-
-    if(ins>>gene_id>>chr>>tss1>>tss2){
-      if(loc_hash.find(gene_id) != loc_hash.end()){
-	gene_map[gene_id] = tss1;
-      }
-    }
-  }
-  gfile.close();
-
-  
-  ifstream sfile(snp_file, ios_base::in | ios_base::binary);
-  boost::iostreams::filtering_istream snp_in;
-  
-  snp_in.push(boost::iostreams::gzip_decompressor());
-  snp_in.push(sfile);
-
-  istringstream snp_ins;
-
-
-  std::string snp_id;
-  double pos;
-  
-  while(getline(snp_in,line)){
-
-    snp_ins.clear();
-    snp_ins.str(line);
-
-    if(snp_ins>>snp_id>>chr>>pos){
-      if(snp_hash.find(snp_id)!=snp_hash.end()){
-	snp_map[snp_id] = pos;
-      }
-    }
-  }
-  sfile.close();
-
-  dist_bin = gsl_vector_int_calloc(p);
-  std::map<int, int> bin_hash;
- 
-  for (int i=0;i<locVec.size();i++){
-    std::string loc_id = locVec[i].id;
-    for(int j=0;j<locVec[i].snpVec.size();j++){
-      std::string snp_id = locVec[i].snpVec[j].id;
-      int bin = classify_dist_bin(snp_map[snp_id], gene_map[loc_id],dist_bin_size);
-      if(bin_hash.find(bin)==bin_hash.end()){
-         bin_hash[bin] = 0;
-      }
-      bin_hash[bin]++;
-      gsl_vector_int_set(dist_bin,locVec[i].snpVec[j].index, bin);
-    }
-  }
-  
-
-  dtss_map[0] =0;
-  dtss_rmap[0] = 0;
-  int count = 1;
-  for (std::map<int,int>::iterator it=bin_hash.begin(); it!=bin_hash.end(); ++it){
-    //printf("bin %d    %d \n", it->first, it->second);
-    if(it->first==0)
-      continue;
-    dtss_map[it->first] = count;
-    dtss_rmap[count] = it->first;
-    //printf("%d   %f    %d\n",count, map_bin_2_dist(count,dist_bin_size),it->second);
-    count++;
-  }
-  
-  dist_bin_level = count;
-  
-  for(int i=0;i<p;i++){
-    //printf("%d \n", gsl_vector_int_get(dist_bin,i));
-    gsl_vector_int_set(dist_bin, i, dtss_map[gsl_vector_int_get(dist_bin,i)]);
-  }
-  //exit(1);
-  
-}
-
-
-
-
-
-void controller::load_annotation(const char* annot_file){
-
-   using namespace std;
-  std::map<string, std::vector<double> > annot_map;
-
-  std::map<int, int> col2cat;
-  std::map<int, int> col2cpos;
-  std::map<int, int> col2dpos;
-  int col_count = -1;
-  
-
-  if(strlen(annot_file)>0){
- 
- 
-
-
-    ifstream afile(annot_file, ios_base::in | ios_base::binary);
-    boost::iostreams::filtering_istream in;
-
-    in.push(boost::iostreams::gzip_decompressor());
-    in.push(afile);
-    
-    std::string line;
-    istringstream ins;
-
-    // parsing headers
-
-    int count_d=0;
-    int count_c=0;
-    
-    fprintf(stderr, "Loading annotations ... \n");
- 
-    
-    while(getline(in,line)){
-      ins.clear();
-      ins.str(line);
-      
-      std::string token;
-      
-      while(ins>>token){
-
-	if(col_count==-1){
-	  if(token == "SNP" || token == "snp"){
-	    col_count = 0;
-	    continue;
-	  }else{
-	    break;
-	  }
-	}
-	
-	string cat = token.substr(token.size()-2, 2);
-	// continuous
-	if(cat == "_c" || cat =="_C"){
-	  col2cat[col_count] = 1;
-	  col2cpos[col_count] = kc;
-	  std::string name = token.substr(0,token.size()-2);
-	  cvar_name_vec.push_back(name);
-	  kc++;
-	} // discrete/categorical
-	else{
-	  col2cat[col_count] = 2;
-	  col2dpos[col_count] = kd;
-	  std::string name = token.substr(0,token.size()-2);
-	  dvar_name_vec.push_back(name);
-	  kd++;
-	  
-	}
-	
-	col_count++;
-      }
-      
-
-      if(col_count!=-1)
-	break;
-      
-    }
-    
-
-    // read in data
-   
-    
-    while(getline(in,line)){
-     
-      ins.clear();
-      ins.str(line);
-      std::string snp;
-      
-    
-      ins>>snp;
-   
-      if(snp_hash[snp] != 100)
-	continue;
-      
-      double val;
-      std::vector<double> avec;
-      while(ins>>val){
-	avec.push_back(val);	
-      }
-      annot_map[snp] = avec;
-    }
-  }
-  
-
-
-
+  // parsing headers
+  fprintf(stderr, "Loading annotations ... \n");
+  int i=0;
   // memory allocation
 
   if(kc>0){
     Xc = gsl_matrix_calloc(p,kc);
   }
-  
- 
+
+
   int ncol = kd;
   if(dist_bin_level>0)
     ncol++;
@@ -686,38 +124,32 @@ void controller::load_annotation(const char* annot_file){
     Xd = gsl_matrix_int_calloc(p,ncol);
     dlevel = gsl_vector_int_calloc(ncol);
   }
-  
-  
-  if(kc+kd>0){
-    for (int i=0;i<locVec.size();i++){
-      for(int j=0;j<locVec[i].snpVec.size();j++){
-	string snp_id = locVec[i].snpVec[j].id;
-	int index = locVec[i].snpVec[j].index;
-	
-	std::vector<double> avec((kd+kc),0.0);
-	if(annot_map.find(snp_id)!=annot_map.end())
-	  avec = annot_map[snp_id];
-	
-   
 
-	for(int k=0;k<avec.size();k++){
-	  
-	  if(col2cat[k] == 1){
-	    gsl_matrix_set(Xc,index,col2cpos[k],avec[k]);
-	  }else{
-	    gsl_matrix_int_set(Xd, index, col2dpos[k],int(avec[k]));
-	  }
-	
-	}
-	
-      }
-    }
-   
-    for(int i=0;i<kd;i++){
-      int nl = count_factor_level(i);
-      
-      gsl_vector_int_set(dlevel, i,nl);
-    }
+  for (auto el_c = ap.Xc_begin(); el_c != ap.Xc_end(); ++el_c) {
+    auto rd = el_c->row();
+    auto rc = el_c->col();
+    double rcv =	el_c->value();
+    assertr(rd <= p);
+    assertr(rc <= kc);
+
+
+    gsl_matrix_set(Xc, rd, rc, rcv);
+  }
+  for (auto el_d = ap.Xd_begin(); el_d != ap.Xd_end(); ++el_d) {
+    auto rd = el_d->row();
+    auto rc = el_d->col();
+    int rcv =	el_d->value();
+
+    assertr(rd <= p);
+
+    assertr(rc <= kd);
+
+    gsl_matrix_int_set(Xd, el_d->row(), el_d->col(), el_d->value());
+  }
+
+  for(int i=0;i<kd;i++){
+    int nl = count_factor_level(i);
+    gsl_vector_int_set(dlevel, i,nl);
   }
 
 
@@ -727,12 +159,9 @@ void controller::load_annotation(const char* annot_file){
     dvar_name_vec.push_back(string("dtss"));
     kd++;
   }
-
-
   
   if(dist_bin != 0)
     gsl_vector_int_free(dist_bin);
-
 
 }
 
@@ -789,12 +218,6 @@ void controller::run_EM(){
   fprintf(stderr,"Starting EM ... \n");
   int count = 1;
   double last_log10_lik = -9999999;
-  init_params();
-
-
-          
-  
-
 
   int first_run = 1;
   // examine the stability for prob annotations
@@ -848,6 +271,8 @@ void controller::run_EM(){
     if(ncoef==1){
       simple_regression();
     }
+
+
     // only categrical annotations
     else if(kc==0 && kd!=0){
       if(kd == 1 && !force_logistic){
@@ -1025,8 +450,7 @@ void controller::single_ct_regression(){
     }
  
   }
-  
-  
+
 }
 
 
@@ -1046,7 +470,9 @@ void controller::find_eGene(double fdr_thresh){
     locVec[i].compute_fdr();
   }
   
-  std::sort(locVec.begin(), locVec.end(),rank_by_fdr);
+  std::sort(locVec.begin(), locVec.end(),[](auto &loc1,auto &loc2){
+					   return (loc1.fdr < loc2.fdr);
+					 });
   
   double rej = 1.0;
   double cpr = 0.0;
@@ -1239,7 +665,7 @@ void controller::estimate(){
 
 
 
-void controller::dump_prior(char *prior_path){
+void controller::dump_prior(const char *prior_path){
 
   if(!finish_em){
     run_EM();
@@ -1267,7 +693,7 @@ void controller::dump_prior(char *prior_path){
 }
 
 
-void controller::dump_pip(char *file){
+void controller::dump_pip(const char *file){
   if(!finish_em){
     run_EM();
     finish_em = 1;
@@ -1381,8 +807,36 @@ double controller::eval_likelihood(double x, int index){
 }
 
 
+  std::vector<double> Locus::get_BF()const{
 
+    std::vector<double>	BF;
+    BF.reserve(snpVec.size());
+    std::transform(snpVec.begin(), snpVec.end(), std::back_inserter(BF),
+                   [](const SNP &snp) { return snp.log10_BF; });
+    return BF;
+  }
 
+  std::vector<double> Locus::get_pip() const{
+
+    std::vector<double>	pip;
+    pip.reserve(snpVec.size());
+    gsl_vector *tp = pip_vec;
+    std::transform(
+        snpVec.begin(), snpVec.end(), std::back_inserter(pip),
+        [&tp](const SNP &snp) { return gsl_vector_get(tp, snp.index); });
+    return pip;
+  }
+
+    std::vector<double> Locus::get_prior() const{
+
+    std::vector<double>	prior;
+    prior.reserve(snpVec.size());
+    gsl_vector *tp = prior_vec;
+    std::transform(
+        snpVec.begin(), snpVec.end(), std::back_inserter(prior),
+        [&tp](const SNP &snp) { return gsl_vector_get(tp, snp.index); });
+    return prior;
+    }
 
 void Locus::EM_update(){
 
@@ -1430,6 +884,9 @@ void Locus::EM_update(){
   
  
 }
+
+
+
 
 
 void Locus::compute_fdr(){
@@ -1521,9 +978,7 @@ double log10_weighted_sum(std::vector<double> &vec, std::vector<double> &wts){
   return (max+log10(sum));
 }
 
-bool rank_by_fdr (const Locus & loc1 , const Locus & loc2){
-  return (loc1.fdr < loc2.fdr);
-}
+
  
 
 
@@ -1630,7 +1085,8 @@ double map_bin_2_dist(int bin, double bin_size){
   
   return sign*750;
   
-  
+
+
 }
 
 }
