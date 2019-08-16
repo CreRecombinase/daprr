@@ -14,4 +14,6 @@ src/*.dll
 config.log
 config.status
 compile_commands.json
-inst/test.Rmd
+inst/test.Rmd*.o
+*.so
+*.dll

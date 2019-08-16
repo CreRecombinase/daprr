@@ -1,10 +1,111 @@
 #pragma once
 
 #include <gsl/span>
+#include <fmt/printf.h>
+#include <fmt/format.h>
 #include <RcppEigen.h>
+#include "torus.hpp"
+
+namespace elasticdonut {
+
+using SplitView = std::vector< gsl::span<double> >;
+
+inline size_t total_size(const SplitView& r_view){
+  return std::accumulate(r_view.begin(),r_view.end(),0,[](size_t s,auto &sp){
+							 return s+sp.size();
+						       });
+}
+
+class GroupedView{
+public:
+  SplitView r_view;
+  const size_t p;
+  const size_t nr;
+  gsl::span<double> d_view;
+  GroupedView(SplitView r_view_, size_t p_)
+    : r_view(r_view_), p(p_),nr(r_view.size()), d_view(r_view.begin()->data(), p) {}
+  GroupedView(SplitView r_view_)
+      : r_view(r_view_), p(total_size(r_view)), nr(r_view.size()),
+        d_view(r_view.begin()->data(), p) {}
+  GroupedView copy_view(gsl::span<double>	o_data) const {
+    SplitView tr_view(nr);
+    const size_t offset=0;
+    auto ob=o_data.begin();
+    std::transform(r_view.cbegin(),r_view.cend(),tr_view.begin(),[&ob](const auto sp) mutable{
+								   auto ret = gsl::span<double>(ob,sp.size());
+								   ob=ret.end();
+								   return(ret);
+								 });
+    return GroupedView(std::move(tr_view),p);
+  }
+};
+
+class ParameterData {
+public:
+  const size_t p;
+  std::vector<std::string> colnames;
+  const size_t k;
+  const size_t num_params;
+  size_t n_lambda;
+  double prior_init;
+  Rcpp::NumericMatrix beta;
+  Rcpp::NumericMatrix prior;
+  ParameterData(size_t p_, std::vector<std::string> colnames_, double prior_init=1e-3,size_t n_lambda_ = 1)
+    : p(p_),colnames(colnames_),
+      k(colnames.size()),
+      num_params(k+1),
+      n_lambda(n_lambda_),
+      beta(num_params, n_lambda),
+      prior(p, n_lambda) {
+
+    std::fill(prior.begin(),prior.end(),prior_init);
+
+  }
+
+  // ParameterData(Rcpp::NumericMatrix beta_, Rcpp::NumericMatrix pip_,
+  //               Rcpp::NumericMatrix prior_, Rcpp::StringVector cnames)
+  //     : p(pip_.nrow()), colnames(Rcpp::as<std::vector<std::string>>(cnames)),
+  //       k(beta_.nrow()-1),n_lambda(prior_.ncol()),prior_init(*prior_.begin()), beta(Rcpp::clone(beta_)), pip(Rcpp::clone(pip_)), prior(Rcpp::clone(prior_)) {}
+  void reset(){
+    std::fill(prior.begin(),prior.end(),prior_init);
+    std::fill(beta.begin(),beta.end(),0);
+  }
+  ParameterData(Rcpp::NumericVector beta_,
+                Rcpp::NumericVector prior_, Rcpp::StringVector cnames)
+    : p(prior_.size()), colnames(Rcpp::as<std::vector<std::string>>(cnames)),
+      k(beta_.size()-1),num_params(k+1),n_lambda(1),prior_init(*prior_.begin()), beta(k+1,n_lambda,beta_.cbegin()), prior(p,n_lambda,prior_.cbegin()) {}
+
+};
 
 
+  class ParameterBuffer {
+  public:
+    const size_t p;
+    const size_t k;
+    const size_t num_params;
+    GroupedView prior_v;
+    gsl::span<double> beta;
+    std::vector<std::string> names;
+    ParameterBuffer(ParameterData &data, splitter &splt)
+      : p(data.p), k(data.k),num_params(data.num_params),
+	prior_v(splt.split_view(data.prior.begin()), p),
+	beta(data.beta.begin(), num_params), names(data.colnames) {}
+  };
 
+  class SumStatRegion {
+  public:
+  private:
+    mutable std::vector<std::optional<double>> BF_max;
+    mutable std::vector<double> p_vec;
+    GroupedView p_view;
+    const GroupedView BF;
+    //  double E_step(
+  public:
+    SumStatRegion(const GroupedView BF_);
+    double E_steps(const SplitView &r_prior) const;
+    size_t size() const;
+    gsl::span<double> pip();
+  };
 
 //  kopt = optimization flag
 //     kopt = 0 => Newton-Raphson (recommended)
@@ -168,6 +269,11 @@ public:
   ia(p),
   alm(nlam),
   lmu(0){
+    if(nlam==0){
+      Rcpp::stop("number of lambda must be greater than 0");
+    }else{
+      //      Rcpp::Rcerr<<"number of lambda values is:	"<<nlam<<std::endl;
+    }
 
   if(zero){
     a0.setZero();
@@ -176,7 +282,7 @@ public:
     alm.setZero();
   }
   }
-
+  // void predict(Eigen::Map<Eigen::ArrayXd> b
   void setZero(){
     a0.setZero();
     ca.setZero();
@@ -185,12 +291,12 @@ public:
   }
   void unpack_coeffs(){
     if(lmu==0){
-      Rcpp::stop("number of lambda values is 0!");
+      Rcpp::stop("number of (actual) lambda values is 0!");
     }
 
     int	one=1;
     int pp1=p+1;
-    retcoeff.resize(nlam,lmu);
+    retcoeff.resize(p,lmu);
     F77_SUB(lsolns)(&p,&p,&one,&lmu,ca.data(),ia.data(),nin.data(),retcoeff.data());
   }
 
@@ -210,17 +316,21 @@ public:
 //   Logdap(const T &X_, const double alpha_=0,std::vector<double> lambda= {0},const double thresh=1e-07,const int maxiter=100000):
 
 
+
+
+
 template<typename T>
 class Lognet{
+public:
   int n;
   int p;
   std::vector<double> ulam;
   int nlam;
   comp_coeff coeff;
   double alpha ;
-  const T& x_o;
+  const Eigen::Map<T> x_o;
   T x;
-  Eigen::MatrixXd y;
+  mutable Eigen::MatrixXd y;
   Eigen::MatrixXd o;
   Eigen::ArrayXd one_vec;
   Eigen::MatrixXd interval_mat;
@@ -238,10 +348,10 @@ class Lognet{
   int nlp;
   int jerr;
 public:
-  Lognet(const T &X_, const double alpha_=0,std::vector<double> lambda= {0},const double thresh=1e-07,const int maxiter=100000):
+  Lognet(const Eigen::Map<T> X_, const double alpha_=0,std::vector<double> lambda= {0},const double thresh=1e-07,const int maxiter=100000):
     n(X_.rows()),
     p(X_.cols()),
-    ulam(std::move(lambda)),
+    ulam(lambda),
     nlam(ulam.size()),
     coeff(nlam,p),
     alpha(alpha_),
@@ -263,6 +373,10 @@ public:
     alm(nlam),
     nlp(0),
     jerr(0){
+    if(ulam.size()==0){
+      static_assert(std::is_same_v<typename T::Scalar,double>,"Matrix must be of scalar type");
+      Rcpp::stop("lambda cannot be empty");
+    }
 
     for(int i=0; i<p; i++){
       interval_mat(0,i)=-9e35;
@@ -274,7 +388,7 @@ public:
   }
   void fit(const gsl::span<double> yd);
   void read_coeffs(gsl::span<double> beta,int index=0);
-  void predict(const gsl::span<double> beta,gsl::span<double> y)const;
+  void predict(const gsl::span<double> beta,gsl::span<double> yhat)const;
 };
 
 
@@ -285,7 +399,6 @@ public:
 template<>
 inline void Lognet<Eigen::MatrixXd>::fit(const gsl::span<double> yd){
 
-
   y.col(0)=  Eigen::Map<Eigen::ArrayXd>(yd.data(),yd.size());
   y.col(1)=1-y.col(0).array();
   x=x_o;
@@ -293,7 +406,13 @@ inline void Lognet<Eigen::MatrixXd>::fit(const gsl::span<double> yd){
   int jd = 0;
   int nc = 1;
   int pp1 = p+1;
-  //  lmu=0;
+  // if(coeff.lmu==0){
+  //   Rcpp::stop("number of lambda values is 0 (before fit)!");
+  // }else{
+  //   Rcpp::Rcerr<<"number of lambda values is :"<<coeff.lmu<<std::endl;
+  // }
+
+
   F77_SUB(lognet)(&alpha,
 		  &n,
 		  &p,
@@ -324,6 +443,47 @@ inline void Lognet<Eigen::MatrixXd>::fit(const gsl::span<double> yd){
 		  alm.data(),
 		  &nlp,
 		  &jerr);
+
+  if(jerr!=0){
+    if (jerr > 0) {
+      Rcpp::Rcerr << "fatal error	in splognet: " << jerr << std::endl;
+      if (jerr < 7777)
+        Rcpp::stop("memory allocation error");
+
+      if (jerr > 8000 && jerr < 9000)
+        Rcpp::stop("null probability < 1e-5 for class :" +
+                   std::to_string(jerr - 8000));
+
+      if (jerr > 9000 && jerr < 10000)
+        Rcpp::stop("null probability > 1.0 - 1e-5 for class :" +
+                   std::to_string(jerr - 9000));
+
+      if (jerr == 10000)
+        Rcpp::stop("maxval(vp) <= 0.0");
+
+      if (jerr == 90000)
+        Rcpp::stop("Bounds adjustnemt non convergence");
+    }
+    if (jerr < 0) {
+      Rcpp::Rcerr << "noon-fatal error in splognet: " << jerr << std::endl;
+
+      if (abs(jerr) < 1000)
+        Rcpp::stop("convergence not reached for class: " +
+                   std::to_string(abs(jerr)));
+
+      if (abs(jerr) > 10000)
+        Rcpp::stop("number of non zero coefficients along path exceeds nx at "
+                   "lambda index :" +
+                   std::to_string(abs(jerr) - 10000));
+
+      if (abs(jerr) > 20000)
+        Rcpp::stop("max(p*(1-p)) < 1e-06 at lambda index: " +
+                   std::to_string(abs(jerr) - 20000));
+    }
+  }
+
+
+
 
   coeff.unpack_coeffs();
 
@@ -380,6 +540,44 @@ inline void Lognet<Eigen::SparseMatrix<double>>::fit(const gsl::span<double> yd)
 	    &nlp,
 	    &jerr);
 
+    if(jerr!=0){
+    if (jerr > 0) {
+      Rcpp::Rcerr << "fatal error	in splognet: " << jerr << std::endl;
+      if (jerr < 7777)
+        Rcpp::stop("memory allocation error");
+
+      if (jerr > 8000 && jerr < 9000)
+        Rcpp::stop("null probability < 1e-5 for class :" +
+                   std::to_string(jerr - 8000));
+
+      if (jerr > 9000 && jerr < 10000)
+        Rcpp::stop("null probability > 1.0 - 1e-5 for class :" +
+                   std::to_string(jerr - 9000));
+
+      if (jerr == 10000)
+        Rcpp::stop("maxval(vp) <= 0.0");
+
+      if (jerr == 90000)
+        Rcpp::stop("Bounds adjustnemt non convergence");
+    }
+    if (jerr < 0) {
+      Rcpp::Rcerr << "noon-fatal error in splognet: " << jerr << std::endl;
+
+      if (abs(jerr) < 1000)
+        Rcpp::stop("convergence not reached for class: " +
+                   std::to_string(abs(jerr)));
+
+      if (abs(jerr) > 10000)
+        Rcpp::stop("number of non zero coefficients along path exceeds nx at "
+                   "lambda index :" +
+                   std::to_string(abs(jerr) - 10000));
+
+      if (abs(jerr) > 20000)
+        Rcpp::stop("max(p*(1-p)) < 1e-06 at lambda index: " +
+                   std::to_string(abs(jerr) - 20000));
+    }
+  }
+
     coeff.unpack_coeffs();
 
 }
@@ -387,19 +585,77 @@ inline void Lognet<Eigen::SparseMatrix<double>>::fit(const gsl::span<double> yd)
 
 
 template<typename T>
-inline void Lognet<T>::read_coeffs(gsl::span<double> beta,int index){
+void Lognet<T>::read_coeffs(gsl::span<double> beta,int index){
   beta[0]=coeff.a0[index];
   Eigen::VectorXd tcol=coeff.retcoeff.col(index);
   std::copy_n(tcol.data(),tcol.size(),beta.begin()+1);
 }
 
-template<typename T>
-inline void Lognet<T>::predict(const gsl::span<double> beta,gsl::span<double> y)const {
+template <typename T>
+inline void Lognet<T>::predict(const gsl::span<double> beta,
+                               gsl::span<double> yhat) const {
 
-  const Eigen::Map<Eigen::VectorXd> beta_v(beta.data(),beta.size());
-  Eigen::Map<Eigen::ArrayXd> y_v(y.data(),y.size());
-  y_v = beta_v.tail(beta_v.size()-1)*x_o;
+  if (beta.size() != (p + 1)) {
+    Rcpp::stop("size of beta is " + std::to_string(beta.size()) + " in predict");
+  }
+  if (yhat.size() != n) {
+    Rcpp::stop("size of y is " + std::to_string(yhat.size()) + " and not " +
+               std::to_string(n) + "in predict");
+  }
+  Eigen::Map<Eigen::VectorXd> beta_v(beta.subspan(1, p).data(), p);
+  Eigen::Map<Eigen::VectorXd> y_v(yhat.data(), yhat.size());
 
-  y_v =	1/(1+(-(beta_v[0]+y_v).exp()));
+  this->y.col(0) = (x_o * beta_v);
 
+  this->y.col(0) = 1 / (1 + (-(beta[0] + this->y.col(0).array())).exp());
+  y_v = this->y.col(0);
 }
+
+  class	ElasticDonut{
+  public:
+    SumStatRegion sumstats;
+    Lognet<Eigen::MatrixXd> logistic;
+    std::vector<double> prior_vec;
+    GroupedView prior_view;
+    std::vector< std::string> names;
+    std::vector<double> beta;
+    std::vector<double> diff;
+
+    const double EM_thresh;
+
+    ElasticDonut(GroupedView BF_v, const Rcpp::NumericMatrix X,const double prior_init=1e-3,
+                 double EM_thresh_ = 0.05, const double alpha = 0,
+                 const std::vector<double> lambda = {0})
+      : sumstats(BF_v), logistic(Rcpp::as<Eigen::Map<Eigen::MatrixXd>>(X), alpha, lambda),
+	prior_vec(BF_v.p,prior_init),prior_view(BF_v.copy_view(prior_vec)),names(Rcpp::as<std::vector<std::string> >(Rcpp::colnames(X))),beta(logistic.p+1,0.0),diff(logistic.p+1,0.0),EM_thresh(EM_thresh_) {}
+    double fit(){
+
+      auto &prior_r = prior_view.r_view;
+      auto &prior =  prior_view.d_view;
+      int iter_ct=0;
+      int iter_max=20;
+    double last_log10_lik = -9999999;
+    double curr_log10_lik = 0;
+    Rcpp::Rcerr<<fmt::sprintf("Iter\tloglik\tIntercept\t");
+    for(auto &n : names){
+      Rcpp::Rcerr<<n<<"\t";
+    }
+    Rcpp::Rcerr<<std::endl;
+    while (iter_ct < iter_max &&
+           fabs(curr_log10_lik - last_log10_lik) > EM_thresh) {
+      last_log10_lik = curr_log10_lik;
+      curr_log10_lik = sumstats.E_steps(prior_r);
+      logistic.fit(sumstats.pip());
+      Rcpp::Rcerr<<iter_ct<<"\t"<<iter_ct<<"\t"<<curr_log10_lik/log10(exp(1));
+      logistic.read_coeffs(beta);
+      for (auto bv : beta) {
+        Rcpp::Rcerr << "\t" << bv;
+      }
+      Rcpp::Rcerr << std::endl;
+      logistic.predict(beta, prior);
+    }
+    return curr_log10_lik;
+    }
+  };
+
+} // namespace elasticdonut

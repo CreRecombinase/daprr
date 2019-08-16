@@ -7,6 +7,64 @@
 
 using namespace Rcpp;
 
+// elastic_donut
+Rcpp::List elastic_donut(Rcpp::IntegerVector locus, Rcpp::NumericVector z, Rcpp::NumericMatrix X, double EM_thresh, const double alpha, Rcpp::NumericVector lambda, const double prior_init);
+RcppExport SEXP _daprcpptest_elastic_donut(SEXP locusSEXP, SEXP zSEXP, SEXP XSEXP, SEXP EM_threshSEXP, SEXP alphaSEXP, SEXP lambdaSEXP, SEXP prior_initSEXP) {
+BEGIN_RCPP
+    Rcpp::RObject rcpp_result_gen;
+    Rcpp::RNGScope rcpp_rngScope_gen;
+    Rcpp::traits::input_parameter< Rcpp::IntegerVector >::type locus(locusSEXP);
+    Rcpp::traits::input_parameter< Rcpp::NumericVector >::type z(zSEXP);
+    Rcpp::traits::input_parameter< Rcpp::NumericMatrix >::type X(XSEXP);
+    Rcpp::traits::input_parameter< double >::type EM_thresh(EM_threshSEXP);
+    Rcpp::traits::input_parameter< const double >::type alpha(alphaSEXP);
+    Rcpp::traits::input_parameter< Rcpp::NumericVector >::type lambda(lambdaSEXP);
+    Rcpp::traits::input_parameter< const double >::type prior_init(prior_initSEXP);
+    rcpp_result_gen = Rcpp::wrap(elastic_donut(locus, z, X, EM_thresh, alpha, lambda, prior_init));
+    return rcpp_result_gen;
+END_RCPP
+}
+// dap_donut
+Rcpp::List dap_donut(Rcpp::IntegerVector locus, Rcpp::NumericVector z, Rcpp::NumericMatrix X, double EM_thresh, const double alpha, Rcpp::NumericVector lambda, const double prior_init);
+RcppExport SEXP _daprcpptest_dap_donut(SEXP locusSEXP, SEXP zSEXP, SEXP XSEXP, SEXP EM_threshSEXP, SEXP alphaSEXP, SEXP lambdaSEXP, SEXP prior_initSEXP) {
+BEGIN_RCPP
+    Rcpp::RObject rcpp_result_gen;
+    Rcpp::RNGScope rcpp_rngScope_gen;
+    Rcpp::traits::input_parameter< Rcpp::IntegerVector >::type locus(locusSEXP);
+    Rcpp::traits::input_parameter< Rcpp::NumericVector >::type z(zSEXP);
+    Rcpp::traits::input_parameter< Rcpp::NumericMatrix >::type X(XSEXP);
+    Rcpp::traits::input_parameter< double >::type EM_thresh(EM_threshSEXP);
+    Rcpp::traits::input_parameter< const double >::type alpha(alphaSEXP);
+    Rcpp::traits::input_parameter< Rcpp::NumericVector >::type lambda(lambdaSEXP);
+    Rcpp::traits::input_parameter< const double >::type prior_init(prior_initSEXP);
+    rcpp_result_gen = Rcpp::wrap(dap_donut(locus, z, X, EM_thresh, alpha, lambda, prior_init));
+    return rcpp_result_gen;
+END_RCPP
+}
+// predict_dap
+Rcpp::NumericVector predict_dap(Rcpp::NumericVector beta, Rcpp::IntegerMatrix X);
+RcppExport SEXP _daprcpptest_predict_dap(SEXP betaSEXP, SEXP XSEXP) {
+BEGIN_RCPP
+    Rcpp::RObject rcpp_result_gen;
+    Rcpp::RNGScope rcpp_rngScope_gen;
+    Rcpp::traits::input_parameter< Rcpp::NumericVector >::type beta(betaSEXP);
+    Rcpp::traits::input_parameter< Rcpp::IntegerMatrix >::type X(XSEXP);
+    rcpp_result_gen = Rcpp::wrap(predict_dap(beta, X));
+    return rcpp_result_gen;
+END_RCPP
+}
+// predict_glmnet
+Rcpp::NumericVector predict_glmnet(Rcpp::NumericVector beta, Rcpp::NumericMatrix X);
+RcppExport SEXP _daprcpptest_predict_glmnet(SEXP betaSEXP, SEXP XSEXP) {
+BEGIN_RCPP
+    Rcpp::RObject rcpp_result_gen;
+    Rcpp::RNGScope rcpp_rngScope_gen;
+    Rcpp::traits::input_parameter< Rcpp::NumericVector >::type beta(betaSEXP);
+    Rcpp::traits::input_parameter< Rcpp::NumericMatrix >::type X(XSEXP);
+    rcpp_result_gen = Rcpp::wrap(predict_glmnet(beta, X));
+    return rcpp_result_gen;
+END_RCPP
+}
 // z_to_BF
 Rcpp::NumericVector z_to_BF(Rcpp::NumericVector z_hat);
 RcppExport SEXP _daprcpptest_z_to_BF(SEXP z_hatSEXP) {
@@ -78,6 +136,10 @@ END_RCPP
 RcppExport SEXP run_testthat_tests();
 
 static const R_CallMethodDef CallEntries[] = {
+    {"_daprcpptest_elastic_donut", (DL_FUNC) &_daprcpptest_elastic_donut, 7},
+    {"_daprcpptest_dap_donut", (DL_FUNC) &_daprcpptest_dap_donut, 7},
+    {"_daprcpptest_predict_dap", (DL_FUNC) &_daprcpptest_predict_dap, 2},
+    {"_daprcpptest_predict_glmnet", (DL_FUNC) &_daprcpptest_predict_glmnet, 2},
     {"_daprcpptest_z_to_BF", (DL_FUNC) &_daprcpptest_z_to_BF, 1},
     {"_daprcpptest_make_matrix", (DL_FUNC) &_daprcpptest_make_matrix, 2},
     {"_daprcpptest_run_torus", (DL_FUNC) &_daprcpptest_run_torus, 7},

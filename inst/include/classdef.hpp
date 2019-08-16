@@ -7,7 +7,7 @@
 #include <map>
 #include <unordered_map>
 #include "gsl/span"
-
+#include "torus.hpp"
 #include <gsl/gsl_vector.h>
 #include <gsl/gsl_matrix.h>
 
@@ -42,7 +42,13 @@ public:
   double compute_log10_BF(const double z_score) const;
 };
 
-
+  inline  std::vector<double> make_BF(Rcpp::NumericVector z_hat){
+    std::vector<double> BFv(z_hat.size());
+    BF bf;
+    std::transform(z_hat.begin(),z_hat.end(),BFv.begin(),[&bf](double z){
+							   return(bf.compute_log10_BF(z));});
+    return BFv;
+  }
 
   inline  std::vector<double> make_BF(const gsl::span<double> z_hat){
     std::vector<double> BFv(z_hat.size());
@@ -96,50 +102,10 @@ class Locus {
 
 };
 
-class splitter{
-  std::vector<size_t> ret_v;
-public:
-  splitter(Rcpp::IntegerVector ser):ret_v(Rcpp::as<std::vector<size_t>>(ser)){
-  }
-  splitter(std::vector<size_t> &&ret_v_):ret_v(ret_v_){}
-  gsl::span<double> split_range(double* data_pt,int idx)const {
-    int beg=ret_v[idx];
-    int	ret_s =	ret_v[idx+1]-ret_v[idx];
-    return(gsl::span<double>(data_pt+beg,ret_s));
-  }
-  const int num_regions()const {
-    return(static_cast<int>(ret_v.size()-1));
-  }
-  std::vector<gsl::span<double> > split_view(double* data_pt) const{
-    const int tot_r= num_regions();
-    std::vector< gsl::span<double> > groupv(tot_r);
-    for(int i=0; i<tot_r; i++){
-      groupv[i]=split_range(data_pt,i);
-    }
-    return groupv;
-  }
-  Rcpp::IntegerVector export_object() const{
-    return Rcpp::wrap(ret_v);
-  }
-  // template<typename T>
-  // void serialize (Archive& archive){
-  //   archive(ret_v);
-  // }
-};
 
 
-template<typename T>
-splitter make_splitter(T v_begin, T v_end){
-  std::vector<size_t> ret_v;
-    auto t_b = v_begin;
-    auto t_i = t_b;
-    ret_v.push_back(0);
-    while(t_i != v_end){
-      t_i = std::upper_bound(t_i,v_end,*t_i);
-      ret_v.push_back(std::distance(t_b,t_i));
-    }
-    return(splitter(std::move(ret_v)));
-}
+
+
 
 class Result_obj{
 
@@ -172,7 +138,7 @@ public:
 
 
 class controller {
-  splitter split;
+  elasticdonut::splitter split;
   
 public:
 
@@ -183,7 +149,7 @@ public:
   RcppGSL::vector<double> beta_vec;
 
 
-  controller(const splitter &split_,Result_obj &obj,RcppGSL::matrix<int> anno_mat,double EM_thresh_=0.05,double init_pi1_=1e-3,int print_avg_=0):
+  controller(const elasticdonut::splitter &split_,Result_obj &obj,RcppGSL::matrix<int> anno_mat,double EM_thresh_=0.05,double init_pi1_=1e-3,int print_avg_=0):
     split(split_),
     saved_beta_vec(obj.o_beta),
     saved_prior_vec(obj.o_prior),
@@ -253,6 +219,7 @@ public:
   void single_probt_est();
   void init_params();
   void run_EM(const bool use_glmnet);
+  std::vector<int> get_region_id();
 
   // template<typename T>
   // void serialize(T & archive){

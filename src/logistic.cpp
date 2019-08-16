@@ -853,32 +853,125 @@ void Logistic::fit(gsl_vector *beta,gsl_matrix_int *X,gsl_vector_int *nlev,gsl_v
   fprintf(stderr,"#Initial -log(Lik(0))=%lf\n",mLogLik);
 #endif //_RPR_DEBUG
 
-  for(iter=0;iter<100;iter++){
-    wgsl_cat_optim_hessian(beta,&p,myH); //Calculate Hessian
-    wgsl_cat_optim_df(beta,&p,myG);      //Calculate Gradient
-    gsl_linalg_QR_decomp(myH,tau);   //Calculate next beta
-    gsl_linalg_QR_solve(myH,tau,myG,stBeta);
-    gsl_vector_sub(beta,stBeta);
+  for (iter = 0; iter < 100; iter++) {
+    wgsl_cat_optim_hessian(beta, &p, myH); // Calculate Hessian
+    wgsl_cat_optim_df(beta, &p, myG);      // Calculate Gradient
+    gsl_linalg_QR_decomp(myH, tau);        // Calculate next beta
+    gsl_linalg_QR_solve(myH, tau, myG, stBeta);
+    gsl_vector_sub(beta, stBeta);
 
-    //Monitor convergence
-    maxchange=0;
-    for(int i=0;i<npar; i++)
-      if(maxchange<fabs(stBeta->data[i]))
-	maxchange=fabs(stBeta->data[i]);
-    if(maxchange<1E-4)
+    // Monitor convergence
+    maxchange = 0;
+    for (int i = 0; i < npar; i++)
+      if (maxchange < fabs(stBeta->data[i]))
+        maxchange = fabs(stBeta->data[i]);
+    if (maxchange < 1E-4)
       break;
   }
 
 #ifdef _RPR_DEBUG_
   for (int i = 0; i < npar; i++)
-    fprintf(stderr,"#par_%d= %lf\n",i,beta->data[i]);
+    fprintf(stderr, "#par_%d= %lf\n", i, beta->data[i]);
 #endif //_RPR_DEBUG
 
-  //Final fit
+  // Final fit
+  mLogLik = wgsl_cat_optim_f(beta, &p);
+  // fprintf(stderr,"#Final %d) -log(Lik(0))=%lf, maxchange
+  // %lf\n",iter,mLogLik,maxchange);
+
+  // return 0;
+}
+void Dap_logit::fit(gsl::span<double> data) {
+  const size_t n = data.size();
+  gsl_vector retv;
+  gsl_vector *y = &retv;
+  y->size = n;
+  y->stride = 1;
+  y->data = data.data();
+  y->block = nullptr;
+  y->owner = 0;
+
+  double mLogLik=0;
+  int iter=0;
+  double maxchange=0;
+
+  fix_parm_cat_T p;
+  int npar = beta->size;
+
+  //Intializing fix parameters
+  p.X=X;
+  p.nlev=nlev;
+  p.y=y;
+  p.lambdaL1=lambdaL1;
+  p.lambdaL2=lambdaL2;
+
+  //Initial fit
   mLogLik = wgsl_cat_optim_f(beta,&p);
-  //fprintf(stderr,"#Final %d) -log(Lik(0))=%lf, maxchange %lf\n",iter,mLogLik,maxchange);
+#ifdef _RPR_DEBUG_
+  fprintf(stderr,"#Initial -log(Lik(0))=%lf\n",mLogLik);
+#endif //_RPR_DEBUG
+
+  for (iter = 0; iter < 100; iter++) {
+    wgsl_cat_optim_hessian(beta, &p, myH); // Calculate Hessian
+    wgsl_cat_optim_df(beta, &p, myG);      // Calculate Gradient
+    gsl_linalg_QR_decomp(myH, tau);        // Calculate next beta
+    gsl_linalg_QR_solve(myH, tau, myG, stBeta);
+    gsl_vector_sub(beta, stBeta);
+
+    // Monitor convergence
+    maxchange = 0;
+    for (int i = 0; i < npar; i++)
+      if (maxchange < fabs(stBeta->data[i]))
+        maxchange = fabs(stBeta->data[i]);
+    if (maxchange < 1E-4)
+      break;
+  }
+
+#ifdef _RPR_DEBUG_
+  for (int i = 0; i < npar; i++)
+    fprintf(stderr, "#par_%d= %lf\n", i, beta->data[i]);
+#endif //_RPR_DEBUG
+
+  // Final fit
+  mLogLik = wgsl_cat_optim_f(beta, &p);
+  // fprintf(stderr,"#Final %d) -log(Lik(0))=%lf, maxchange
+  // %lf\n",iter,mLogLik,maxchange);
+}
 
 
+void Dap_logit::read_coeffs(gsl::span<double> obeta) {
+  gsl::span<double> mbeta(beta->data,beta->size);
+  if (obeta.size() != mbeta.size()) {
+    Rcpp::stop("obeta.size()!=mbeta.size() in Dap_logit::read_coeffs");
+  }
+  std::copy(mbeta.begin(), mbeta.end(), obeta.begin());
+}
 
-  //return 0;
+void Dap_logit::predict(gsl::span<double> beta, gsl::span<double> syhat){
+
+  const size_t ny = syhat.size();
+  const size_t nb = beta.size();
+  gsl_vector sy,sb;
+  gsl_vector *yhat = &sy;
+  gsl_vector *obeta = &sb;
+
+  yhat->size = ny;
+  obeta->size = nb;
+
+  yhat->stride = 1;
+  obeta->stride = 1;
+
+  yhat->data = syhat.data();
+  obeta->data = beta.data();
+
+  yhat->block = nullptr;
+  obeta->block = nullptr;
+
+  yhat->owner = 0;
+  obeta->owner = 0;
+
+
+  logistic_cat_pred(obeta,X,nlev,yhat);
+
+
 }

@@ -140,6 +140,11 @@ void controller::load_annotation(AnnotationParser &ap){
     auto rc = el_d->col();
     int rcv =	el_d->value();
 
+
+    assertr(rd > 0);
+
+    assertr(rc > kd);
+
     assertr(rd <= p);
 
     assertr(rc <= kd);
@@ -150,6 +155,7 @@ void controller::load_annotation(AnnotationParser &ap){
   for(int i=0;i<kd;i++){
     int nl = count_factor_level(i);
     gsl_vector_int_set(dlevel, i,nl);
+    //    Rcpp::Rcerr<<"dlevel: "<<i<<": "<<nl<<std::endl;
   }
 
 
@@ -182,8 +188,8 @@ int controller::count_factor_level(int col){
 
 void controller::init_params(){
   
-  prior_vec = gsl_vector_calloc(p);
-  pip_vec = gsl_vector_calloc(p);
+  prior_vec = RcppGSL::vector<double>(p);
+  pip_vec = RcppGSL::vector<double>(p);
   for(int i=0;i<p;i++){
     gsl_vector_set(prior_vec, i, init_pi1);
   }
@@ -207,10 +213,36 @@ void controller::init_params(){
   
 
 
-  beta_vec = gsl_vector_calloc(ncoef);
+  beta_vec = RcppGSL::vector<double>(ncoef);
   
 }
 
+
+  std::vector<int> controller::get_region_id()const{
+
+
+    std::vector<int> ret;
+    ret.reserve(p);
+    const size_t nr=locVec.size();
+    for (int i = 0; i < nr; i++) {
+      std::fill_n(std::back_inserter(ret), locVec[i].snpVec.size(), i);
+    }
+    return(ret);
+  }
+
+
+  std::vector<double> controller::get_BF() const{
+
+    std::vector<double> ret;
+    ret.reserve(p);
+    const size_t nr=locVec.size();
+    for (int i = 0; i < nr; i++) {
+      std::transform(locVec[i].snpVec.begin(), locVec[i].snpVec.end(),
+                     std::back_inserter(ret),
+                     [](const auto &snp) { return (snp.log10_BF); });
+    }
+    return (ret);
+  }
 
 void controller::run_EM(){  
   
@@ -257,8 +289,8 @@ void controller::run_EM(){
       for(int i=0;i<cvar_name_vec.size();i++){
 	fprintf(stderr, "%s\t", cvar_name_vec[i].c_str());
       }
-      
-    
+
+
       fprintf(stderr,"\n");
 
 
@@ -270,32 +302,14 @@ void controller::run_EM(){
 
     if(ncoef==1){
       simple_regression();
-    }
-
-
-    // only categrical annotations
-    else if(kc==0 && kd!=0){
-      if(kd == 1 && !force_logistic){
+    }    else
+      if(kd == 1 && !force_logistic && kc==0){
 	single_ct_regression();
-      }else{
-	logistic_cat_fit(beta_vec, Xd, dlevel,pip_vec, l1_lambda,l2_lambda);
+    } else {
+      logistic_mixed_fit(beta_vec, Xd, dlevel, Xc, pip_vec, l1_lambda,
+                         l2_lambda);
+      logistic_mixed_pred(beta_vec, Xd, dlevel, Xc, prior_vec);
       }
-      
-      logistic_cat_pred(beta_vec, Xd, dlevel,prior_vec);
-    }
-    // only continuous annotations
-    else if(kc!=0 && kd==0){
-      
-      logistic_cont_fit(beta_vec, Xc, pip_vec,l1_lambda, l2_lambda);      
-      logistic_cont_pred(beta_vec,Xc, prior_vec);
-	
-    }
-    // both continuous and categorical annotations
-    else if(kc!=0 && kd !=0){
-      logistic_mixed_fit(beta_vec, Xd, dlevel, Xc, pip_vec, l1_lambda,l2_lambda);
-      logistic_mixed_pred(beta_vec,Xd, dlevel, Xc, prior_vec);
-    }
-
     //printf("%f   %f\n%f   %f\n",ct_00, ct_01, ct_10, ct_11);
     fprintf(stderr,"%4d        %10.3f        ",count++,curr_log10_lik/log10(exp(1)));
     
@@ -304,10 +318,8 @@ void controller::run_EM(){
       fprintf(stderr, "%9.3f  ",gsl_vector_get(beta_vec,i));
     }
     fprintf(stderr,"\n");
-   
-    // output 
-    
-    
+
+    // output
     
     if(fabs(curr_log10_lik-last_log10_lik)<EM_thresh){
       final_log10_lik = curr_log10_lik;
@@ -594,6 +606,7 @@ void controller::estimate(){
       //printf("%f  %f  %f\n", null_log10_lik/log10(exp(1)), final_log10_lik/log10(exp(1)), diff);
 
       if(diff<0){
+	//	Rcpp::Rcerr<<"fine optimizing"<<label<<std::endl;
 	double curr_log10_lik = final_log10_lik;
 	est = fine_optimize_beta(index, est, null_log10_lik,  curr_log10_lik);
 	diff = fabs(curr_log10_lik - null_log10_lik)/log10(exp(1));
@@ -716,21 +729,19 @@ void controller::dump_pip(const char *file){
 
 double controller::fine_optimize_beta(int index, double est, double null_log10_lik, double &curr_log10_lik){
   
-  double gr = (sqrt(5)-1)/2.0;
-  
-  /*
-  double a = -fabs(est);
-  double b = fabs(est);
-  */
+  double gradient = (sqrt(5)-1)/2.0;
 
-  double a = est;
-  double b = 0;
-  if(a > b){
-    b = a;
-    a = 0;
+
+  double term_vt  = est > 0 ? 0 : est;
+
+  double term_v = est;
+  double null_v = 0;
+  if(term_v > null_v){
+    null_v = term_v;
+    term_v = 0;
   }
-  double c = b - gr*(b-a);
-  double d = a + gr*(b-a);
+  double c = null_v - gradient*(null_v-term_v);
+  double d = term_v + gradient*(null_v-term_v);
 
   double thresh = 1e-3;
   if(fabs(c-d)<thresh){
@@ -755,9 +766,9 @@ double controller::fine_optimize_beta(int index, double est, double null_log10_l
 	return c;
       }
       */
-      b = d;
+      null_v = d;
       d = c;
-      c = b - gr*(b-a);
+      c = null_v - gradient*(null_v-term_v);
     }else{
       /*
       if(fd > null_log10_lik){
@@ -765,16 +776,16 @@ double controller::fine_optimize_beta(int index, double est, double null_log10_l
 	return d;
       }
       */
-      a = c;
+      term_v = c;
       c = d;
-      d = a + gr*(b-a);
+      d = term_v + gradient*(null_v-term_v);
     }
   }
   
 
   curr_log10_lik = fc;
 
-  return (b+a)/2;
+  return (null_v+term_v)/2;
 
   
   

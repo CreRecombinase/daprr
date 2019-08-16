@@ -5,14 +5,14 @@ context("utils")
 
 test_that("works like cmd", {
 
-  gf <- system.file("gwas_z_t.txt.gz", package = "daprcpp")
-  af <- system.file("gwas_anno_t.txt.gz", package = "daprcpp")
+  gf <- system.file("gwas_z_t.txt.gz", package = "daprcpptest")
+  af <- system.file("gwas_anno_t.txt.gz", package = "daprcpptest")
 
   ret <- tidyr::unnest(daprcpp::run_torus_cmd(gf = gf, af = af)$df,cols=c(data))
-  cmd <- daprcpptest::gen_torus_cmd(gf = gf, af = af)
+  cmd <- daprcpptest:::gen_torus_cmd(gf = gf, af = af)
   cmd <- cmd[!cmd%in%c("--load_zval","-est")]
-  bt <- daprcpptest::dap_torus(cmd)
-  btl <- tidyr::unnest(parse_torus_s(bt$s,bt$lik),cols=c(data))
+  bt <- daprcpptest:::dap_torus(cmd)
+  btl <- tidyr::unnest(daprcpptest:::parse_torus_s(bt$s,bt$lik),cols=c(data))
   testthat::expect_equal(unclass(ret),unclass(btl),tolerance=1e-5)
 
 })
@@ -21,21 +21,62 @@ test_that("works like cmd", {
 
 
 test_that("daprcpp and torus give similar results", {
-  
-    snpnum <- 10000 
+
+    snpnum <- 10000
     p <- 3
-    
     anno_r <- 100
     anno_df <- tibble::tibble(SNP = sample(snpnum, anno_r, replace = T),
                               feature = sample(paste0(letters,"_d")[1:p],anno_r, replace = T))
+    w_anno_df <- dplyr::mutate(anno_df,value=1L)
+    w_anno_df <- tidyr::spread(data=w_anno_df,key="feature",value="value",fill=0L)
+    gw_df <- tibble::tibble(SNP = 1:snpnum, locus = cut(1:snpnum, breaks = 3L, labels = F),`z-val`=rnorm(n = snpnum))
+    mymay <- daprcpptest:::make_matrix(snpnum,anno_df)
+    colnames(mymay$annomat) <- mymay$names
+
+     #elm_ret <- daprcpptest:::elastic_donut(locus = gw_df$locus,z = gw_df$`z-val`,X = mymay$annomat)
+    # 
+    elm_ret <- daprcpptest:::dap_donut(locus = gw_df$locus,z = gw_df$`z-val`,X = mymay$annomat)
+    # 
+    tgf <- tempfile(fileext="tsv.gz")
+    readr::write_delim(gw_df,path = tgf)
+    taf <- tempfile(fileext="txt.gz")
+    readr::write_delim(w_anno_df,path = taf)
     
     
-    gw_df <- tibble::tibble(SNP = 1:snpnum, region_id = cut(1:snpnum, breaks = 3L, labels = F),`z-hat`=rnorm(n = snpnum))
-    
-  
+    ret <- tidyr::unnest(daprcpp::run_torus_cmd(gf = tgf, af = taf)$df,cols=c(data))
+    cmd <- daprcpptest:::gen_torus_cmd(gf = tgf, af = taf)
+    cmd <- cmd[!cmd%in%c("--load_zval","-est")]
+    bt <- daprcpptest:::dap_torus(cmd)
+    btl <- tidyr::unnest(daprcpptest:::parse_torus_s(bt$s,bt$lik),cols=c(data))
+    testthat::expect_equal(unclass(ret),unclass(btl),tolerance=1e-5)
   
   
 })
+
+
+test_that("prediction works as it should",{
+  
+  n <- 100
+  p <- 2
+  
+  Xi <- matrix(sample(0L:1L,n*p,replace=T),n,p)
+  Xd <- matrix(as.numeric(Xi),n,p)
+  colnames(Xd) <- letters[1:p]
+  Xdf <- tibble::as_tibble(Xd) 
+  Xdf <- dplyr::mutate(Xdf,y=runif(n))
+  beta <- rnorm(p+1)
+  tfit <- glm(y~offset(beta[1]*rep(1,n))+offset(beta[2]*a)+offset(beta[3]*b)+0,data=Xdf,family=quasibinomial(link="logit"))
+  #tfit <- glm(y~offset(beta[1]*rep(1,n))+offset(beta[2]*a)+0,data=Xdf,family=quasibinomial(link="logit"))
+  #tfit <- glm(y~offset(beta[1]*rep(1,n))+offset(beta[2]*a)+offset(beta[3]*b)+offset(beta[4]*c)+0,data=Xdf,family=quasibinomial(link="logit"))
+  ty <- c(predict.glm(tfit,type="response"))
+  
+  yd <- daprcpptest:::predict_dap(beta,Xi)
+  yg <- daprcpptest:::predict_glmnet(beta,Xd)
+  testthat::expect_equal(ty,yg,check.attributes=F)  
+  testthat::expect_equal(ty,yd,check.attributes=F)  
+  
+})
+
 # 
 # 
 # test_that("torus_df and torus give comparable results", {

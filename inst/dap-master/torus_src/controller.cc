@@ -1298,7 +1298,13 @@ double controller::fine_optimize_beta(int index, double est, double null_log10_l
     b = a;
     a = 0;
   }
+  // b >= a
+  // => (b-a) >=0
+  // gr == 0.618034
+  // => gr * (b-a) < (b-a)
+  // =c <=b
   double c = b - gr*(b-a);
+
   double d = a + gr*(b-a);
 
   double thresh = 1e-3;
@@ -1315,25 +1321,11 @@ double controller::fine_optimize_beta(int index, double est, double null_log10_l
     fc = eval_likelihood(c, index);
     fd = eval_likelihood(d, index);
 
-    
-    //printf("%f %f %f %f   %f %f   %f\n",a, d
     if(fc > fd){
-      /*
-      if(fc > null_log10_lik){
-	curr_log10_lik = fc;
-	return c;
-      }
-      */
       b = d;
       d = c;
       c = b - gr*(b-a);
     }else{
-      /*
-      if(fd > null_log10_lik){
-        curr_log10_lik = fd;
-	return d;
-      }
-      */
       a = c;
       c = d;
       d = a + gr*(b-a);

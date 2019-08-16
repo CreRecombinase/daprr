@@ -5,9 +5,8 @@
 #include <string.h>
 #include <vector>
 #include <map>
+#include <RcppGSL.h>
 
-#include <gsl/gsl_vector.h>
-#include <gsl/gsl_matrix.h>
 #include <string.h>
 #include "io.hpp"
 
@@ -92,7 +91,11 @@ namespace torus {
   public:
     std::stringstream buf_o;
     controller(const std::string gwas_file, const std::string annotation_file,const double EM_thresh_=0.05)
-        : buf_o() {
+      : buf_o(),
+	Xc(nullptr),
+	Xd(nullptr),
+	prior_vec(0),
+	pip_vec(0),beta_vec(0){
       p = kc = kd = dist_bin_level = 0;
       EM_thresh=EM_thresh_;
       force_logistic = 0;
@@ -112,7 +115,7 @@ namespace torus {
       init_params();
     }
 
-      controller(const double EM_thresh_=0.05):buf_o(){
+    controller(const double EM_thresh_=0.05):buf_o(),prior_vec(0),pip_vec(0),beta_vec(0){
       p=kc=kd=dist_bin_level = 0;
       force_logistic = 0;
       dist_bin_size = -1;
@@ -124,6 +127,8 @@ namespace torus {
       init_pi1 = 1e-3;
       print_avg = 0;
     }
+    std::vector<int> get_region_id()const;
+    std::vector<double> get_BF()const;
 
     // storage
     std::vector<Locus> locVec;
@@ -155,9 +160,9 @@ namespace torus {
     gsl_matrix_int *Xd; // p x kd
   
   
-    gsl_vector *prior_vec;
-    gsl_vector *pip_vec;
-    gsl_vector *beta_vec;
+    RcppGSL::vector<double> prior_vec;
+    RcppGSL::vector<double> pip_vec;
+    RcppGSL::vector<double> beta_vec;
   
     int ncoef;
 

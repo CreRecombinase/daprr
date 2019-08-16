@@ -128,6 +128,7 @@ public:
     for(int i=0; i<nr; i++){
       anno_mat(anno_row_id.vec(i)-1,anno_col_id.vec(i)-1)=1;
     }
+    // anno_mat=anno_col_id.names;
     return(anno_mat);
   }
   Rcpp::StringVector names(){
@@ -169,7 +170,7 @@ Rcpp::List run_torus(Rcpp::IntegerVector locus_id, Rcpp::NumericVector z_hat,Rcp
     double EM_thresh = 0.05;
     double init_pi1 = 1e-3;
     int print_avg = 0;
-    auto split = donut::make_splitter(locus_id.begin(),locus_id.end());
+    auto split = elasticdonut::make_splitter(locus_id.begin(),locus_id.end());
     donut::Result_obj res(locus_id.size(),anno_mat.ncol()+1);
     donut::controller con(split,res,anno_mat,EM_thresh,init_pi1,print_avg);
     con.load_data_R(z_hat);
@@ -208,7 +209,6 @@ Rcpp::List torus_df(Rcpp::IntegerVector locus_id, Rcpp::NumericVector z_hat,Rcpp
     // double init_pi1 = 1e-3;
     // int print_avg = 0;
     SparseDF spdf( anno_df, p,"SNP","feature");
-
     auto anno_mat = spdf.getMat();
     auto names = spdf.names();
     return run_torus(locus_id,z_hat,anno_mat,names,prior,do_verbose,use_glmnet);
@@ -234,20 +234,6 @@ RcppGSL::vector<double>	logit_donut(RcppGSL::matrix<int> X,RcppGSL::vector<doubl
 }
 
 
-
-// Rcpp::List dap_torus_df(Rcpp::DataFrame sumstats, Rcpp::DataFrame anno){
-
-//   Rcpp::StringVector SNP(sumstats["SNP"]);
-//   Rcpp::StringVector locus(sumstats["locus"]);
-//   Rcpp::NumericVector z(sumstats["z-val"]);
-
-//   torus::controller con();
-//   const size_t p = SNP.size();
-//   SparseDF spdf(anno,p);
-
-//   FileZscoreParser zsp(data_file);
-//   FileAnnotationParser ap(con.snp_hash,annot_file);
-//   //  torus::controller con(buff_o);
 
 
 

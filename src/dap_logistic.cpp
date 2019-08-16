@@ -7,6 +7,8 @@
 #include <gsl/gsl_linalg.h>
 #include "dap_logistic.hpp"
 
+extern bool force_logistic;
+
 namespace torus {
 
 
@@ -19,6 +21,7 @@ typedef struct{
   double lambdaL1;
   double lambdaL2;
 }fix_parm_mixed_T;
+
 
 
 double fLogit_mixed(gsl_vector *beta
@@ -68,6 +71,13 @@ void logistic_mixed_pred(gsl_vector *beta  // Vector of parameters length = 1 + 
 			 ,gsl_vector *yhat //Vector of prob. predicted by the logistic
 			 )
 {
+
+  if(Xc==nullptr)
+    return logistic_cat_pred(beta,X,nlev,yhat);
+  if(X==nullptr)
+    return logistic_cont_pred(beta,Xc,yhat);
+
+
   for(int i = 0; i < X->size1; ++i) {
     double Xbetai=beta->data[0];
     int iParm=1;
@@ -221,6 +231,15 @@ int logistic_mixed_fit(gsl_vector *beta
 		       ,double lambdaL1
 		       ,double lambdaL2)
 {
+
+
+  if(Xc==nullptr)
+    return logistic_cat_fit(beta,X,nlev,y,lambdaL1,lambdaL2);
+
+  if(X==nullptr)
+    return logistic_cont_fit(beta,Xc,y,lambdaL1,lambdaL2);
+
+
 
   double mLogLik=0;
   fix_parm_mixed_T p;

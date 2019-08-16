@@ -12,9 +12,12 @@
 #include <testthat.h>
 #include "dap_classdef.hpp"
 #include "classdef.hpp"
+#include "logistic.hpp"
+#include "dap_logistic.hpp"
 #include <RcppEigen.h>
+#include "glmnet.hpp"
 #include "io.hpp"
-
+#include <random>
 // Normally this would be a function from your package's
 // compiled library -- you might instead just include a header
 // file providing the definition, and let R CMD INSTALL
@@ -26,19 +29,35 @@
 // associated context should be wrapped in braced.
 
 Rcpp::Function system_file("system.file");
-const std::string gwas_file = Rcpp::as<std::string>(system_file("gwas_z_t.txt.gz",Rcpp::Named("package")="daprcpp"));
-const std::string annotation_file = Rcpp::as<std::string>(system_file("gwas_anno_t.txt.gz",Rcpp::Named("package")="daprcpp"));
+const std::string gwas_file = Rcpp::as<std::string>(system_file("gwas_z_t.txt.gz",Rcpp::Named("package")="daprcpptest"));
+const std::string annotation_file = Rcpp::as<std::string>(system_file("gwas_anno_t.txt.gz",Rcpp::Named("package")="daprcpptest"));
+
+
+
+
+
 
 
 template<class T>
 typename std::enable_if<!std::numeric_limits<T>::is_integer, bool>::type
-    almost_equal(T x, T y, int ulp=3)
+    almost_equal(T x, T y, int ulp=5)
 {
-    // the machine epsilon has to be scaled to the magnitude of the values used
-    // and multiplied by the desired precision in ULPs (units in the last place)
-    return std::abs(x-y) <= std::numeric_limits<T>::epsilon() * std::abs(x+y) * ulp
+  bool ret = std::abs(x-y) <= std::numeric_limits<T>::epsilon() * std::abs(x+y) * ulp
         // unless the result is subnormal
         || std::abs(x-y) < std::numeric_limits<T>::min();
+  if(!ret){
+    //    Rcpp::Rcerr<<x<<"!="<<y<<std::endl;
+  }
+    // the machine epsilon has to be scaled to the magnitude of the values used
+    // and multiplied by the desired precision in ULPs (units in the last place)
+  return ret;
+}
+
+
+bool almost_equal_span(gsl::span<double> a, gsl::span<double> b){
+
+  return std::equal(a.begin(), a.end(), b.begin(), b.end(),
+                    [](double ta, double tb) { return almost_equal(ta, tb); });
 }
 
 context("E step") {
@@ -46,18 +65,17 @@ context("E step") {
 torus::controller con(gwas_file,annotation_file);
 
 FileZscoreParser zsp(gwas_file.c_str());
-FileAnnotationParser ap(con.snp_hash,annotation_file.c_str());
 
 
  test_that("single step"){
    auto tLoc = con.locVec.begin();
    auto pip = tLoc->get_pip();
    auto prior = tLoc->get_prior();
-   auto BF = tLoc->get_BF();
+   auto BFd = tLoc->get_BF();
    tLoc->EM_update();
    const auto log10_lik = tLoc->log10_lik;
    std::optional<double> BFm = std::nullopt;
-   auto comp_log10_lik = elasticdonut::E_step(pip,BF,prior,BFm);
+   auto comp_log10_lik = elasticdonut::E_step(pip,BFd,prior,BFm);
 
    expect_true(almost_equal(comp_log10_lik,log10_lik));
 
@@ -76,13 +94,128 @@ FileAnnotationParser ap(con.snp_hash,annotation_file.c_str());
 
  test_that("each locus"){
 
+   auto locus = con.get_region_id();
+   auto splt = elasticdonut::make_splitter(locus.begin(),locus.end());
+   auto tLoc = con.locVec.begin();
+
+   auto BFd = con.get_BF();
+   const size_t p = BFd.size();
+
+   elasticdonut::ParameterData param(Rcpp::wrap(con.beta_vec),Rcpp::wrap(con.pip_vec),Rcpp::wrap(con.prior_vec),Rcpp::wrap(con.dvar_name_vec));
+   elasticdonut::ParameterBuffer buff(param,splt);
+   elasticdonut::GroupedView BF_v(splt.split_view(&BFd.front()),p);
+   elasticdonut::SumStatRegion sumstats(BF_v);
+   double result_a = std::accumulate(con.locVec.begin(), con.locVec.end(), 0.0,
+                                     [](const double &t_lik, const torus::Locus &a) {
+				       torus::Locus newa = a;
+                                       newa.EM_update();
+				       double tloc =newa.log10_lik;
+				       double new_sum =	(t_lik + newa.log10_lik);
+
+                                       return new_sum;
+                                     });
+   auto pip = con.pip_vec;
+   auto prior = con.prior_vec;
+
+   double result_b = sumstats.E_steps(buff.pip_v.r_view,buff.prior_v.r_view);
+   expect_true(almost_equal(result_a,result_b));
+
+   bool all_eq_pip =
+       std::equal(pip.begin(), pip.end(), buff.pip_v.d_view.begin(),
+                  buff.pip_v.d_view.end(),
+                  [](double a, double b) { return almost_equal(a, b); });
+   expect_true(all_eq_pip);
  }
 }
 
-  // auto line_t =	zsp.getline();
-  // test_that("parsing zscore file works correctly") {
-  //   expect_true(std::get<0>(*line_t) == "1:701835:T:C");
-  // }
+context("M step") {
+
+
+  test_that("Logistic"){
+
+    const size_t n =100;
+    const size_t p = 3;
+
+    Eigen::VectorXd y= (Eigen::ArrayXd::Random(n)+1)/2;
+    gsl::span<double> s_y(y.data(),y.size());
+
+    Eigen::MatrixXi X(n,p);
+    Eigen::Map<Eigen::MatrixXi> mX(X.data(),n,p);
+
+    std::random_device rd;  //Will be used to obtain a seed for the random number engine
+    std::mt19937 gen(rd()); //Standard mersenne_twister_engine seeded with rd()
+    std::uniform_int_distribution<> dis(0, 1);
+
+    X = X.unaryExpr([&dis, &gen](const int t) { return (dis(gen)); });
+    auto gsl_X=copy_matrix(mX);
+    auto nlev = gsl_vector_int_calloc(p);
+
+    for(int j=0; j <p; j++){
+      std::map<int, int> rcd;
+      for (int i = 0; i < n; i++) {
+        int val = gsl_matrix_int_get(gsl_X, i, j);
+        rcd[val] = 1;
+      }
+      gsl_vector_int_set(nlev, j, rcd.size());
+    }
+
+    std::vector<double> beta_a(p + 1);
+    std::vector<double> beta_b(p + 1);
+
+    torus::logistic_mixed_fit(view_span(beta_a), gsl_X, nlev, nullptr,
+                              view_span(s_y), 0, 0);
+    Dap_logit logistic(gsl_X, 0, 0);
+    logistic.fit(s_y);
+    expect_false(almost_equal_span(beta_a, beta_b));
+    logistic.read_coeffs(beta_b);
+
+    expect_true(almost_equal_span(beta_a, beta_b));
+  }
+  test_that("Prediction"){
+
+    const size_t n =100;
+    const size_t p = 3;
+
+    Eigen::VectorXd y= (Eigen::ArrayXd::Random(n)+1)/2;
+    gsl::span<double> s_y(y.data(),y.size());
+
+    Eigen::MatrixXi X(n,p);
+
+    const Eigen::Map<Eigen::MatrixXi> mX(X.data(),n,p);
+
+    std::random_device rd;  //Will be used to obtain a seed for the random number engine
+    std::mt19937 gen(rd()); //Standard mersenne_twister_engine seeded with rd()
+    std::uniform_int_distribution<> dis(0, 1);
+
+    X = X.unaryExpr([&dis, &gen](const int t) { return (dis(gen)); });
+    Eigen::MatrixXd Xd = X.cast<double>();
+    Eigen::Map<Eigen::MatrixXd> mXd(Xd.data(),n,p);
+    auto gsl_X=copy_matrix(mX);
+    std::vector<double> beta(p + 1);
+
+    std::vector<double> y_a(n);
+    std::vector<double> y_b(n);
+
+
+    Dap_logit logistic(gsl_X, 0, 0);
+
+    logistic.fit(s_y);
+    logistic.read_coeffs(beta);
+    elasticdonut::Lognet<Eigen::MatrixXd> ln(mXd);
+    ln.predict(beta,y_a);
+    logistic.predict(beta,y_b);
+
+    expect_true(almost_equal_span(y_a, y_b));
+  }
+
+
+
+}
+
+// auto line_t =	zsp.getline();
+// test_that("parsing zscore file works correctly") {
+//   expect_true(std::get<0>(*line_t) == "1:701835:T:C");
+// }
 
   
 
@@ -91,33 +224,3 @@ FileAnnotationParser ap(con.snp_hash,annotation_file.c_str());
 
 
 
-
-
-context("comparing donut and torus") {
-
-  using namespace Rcpp;
-
-
-  // IntegerVector locus_id  = wrap(read_vec<int>("locus_id.txt.gz"));
-  // NumericVector z_hat  = wrap(read_vec<double>("z_hat.txt.gz"));
-
-  // auto anno_df = DataFrame::create(_["SNP"]=wrap(read_vec<int>("row_id.txt.gz")),
-  // 				   _["feature"]=wrap(read_vec<std::string>("col_id.txt.gz")));
-  // SparseDF spdf( anno_df, p,"SNP","feature");
-  // auto anno_mat = spdf.getMat();
-
-  // const size_t p = locus_id.size();
-
-  // torus::controller cont = cont_wrapper(gwas_file,annotation_file);
-  // auto split = donut::make_splitter(locus_id.begin(),locus_id.end());
-
-  // donut::Result_obj res(locus_id.size(),anno_mat.ncol()+1);
-  // donut::controller do_cont(split,res);
-
-  // cont.init_params();
-
-  test_that("two plus two equals four") {
-    expect_true(4 == 4);
-  }
-
-}

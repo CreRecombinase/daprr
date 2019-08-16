@@ -269,6 +269,8 @@ class FileAnnotationParser : public AnnotationParser{
   std::vector<double> data_c;
   std::vector<std::string> cvar_name_vec;
   std::vector<std::string> dvar_name_vec;
+  gsl::span<int> rows_d;
+  gsl::span<int> cols_d;
   std::string snp;
 public:
   FileAnnotationParser(const std::map<std::string,int> &snp_hash,const char* annot_file):
@@ -350,12 +352,12 @@ public:
           }
         }
       }
-      }
-  Xd_pt Xd_begin(){
+      rows_d=gsl::span<int>(row_d);
+      cols_d=gsl::span<int>(col_d);
 
-    gsl::span<int> rows(row_d);
-    gsl::span<int> cols(col_d);
-    Xd_pt r(rows.begin(),cols.begin());
+  }
+  Xd_pt Xd_begin(){
+    Xd_pt r(rows_d.begin(),cols_d.begin());
     return(r);
   }
   Xc_pt Xc_begin(){
@@ -366,10 +368,7 @@ public:
     return(r);
   }
   Xd_pt Xd_end(){
-
-    gsl::span<int> rows(row_d);
-    gsl::span<int> cols(col_d);
-    Xd_pt r(rows.end(),cols.end());
+    Xd_pt r(rows_d.end(),cols_d.end());
     return(r);
   }
   Xc_pt Xc_end(){
