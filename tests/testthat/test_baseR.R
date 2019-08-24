@@ -5,7 +5,7 @@ context("utils")
 
 test_that("works like cmd", {
 
-  gf <- system.file("gwas_z_t.txt.gz", package = "daprcpptest")
+  gf <- system.file2("gwas_z_t.txt.gz", package = "daprcpptest")
   af <- system.file("gwas_anno_t.txt.gz", package = "daprcpptest")
 
   ret <- tidyr::unnest(daprcpp::run_torus_cmd(gf = gf, af = af)$df,cols=c(data))
@@ -24,18 +24,36 @@ test_that("daprcpp and torus give similar results", {
 
     snpnum <- 10000
     p <- 3
-    anno_r <- 100
+    anno_r <- 250
+    set.seed(100)
+    ln <- letters[1:p]
+    names(ln) <- paste0(letters[1:p],"_d")
+    ct <- paste0(letters,"_d")[1:p]
+    fl <- as.list(rep(0,p))
+    names(fl) <- ct
     anno_df <- tibble::tibble(SNP = sample(snpnum, anno_r, replace = T),
                               feature = sample(paste0(letters,"_d")[1:p],anno_r, replace = T))
+    anno_df <- dplyr::distinct(anno_df,SNP,feature)
     w_anno_df <- dplyr::mutate(anno_df,value=1L)
     w_anno_df <- tidyr::spread(data=w_anno_df,key="feature",value="value",fill=0L)
+  
     gw_df <- tibble::tibble(SNP = 1:snpnum, locus = cut(1:snpnum, breaks = 3L, labels = F),`z-val`=rnorm(n = snpnum))
-    mymay <- daprcpptest:::make_matrix(snpnum,anno_df)
-    colnames(mymay$annomat) <- mymay$names
+    #mymay <- daprcpptest:::make_matrix(snpnum,anno_df)
+    
+    anno_mat <- data.matrix(dplyr::select(tidyr::replace_na(dplyr::left_join(dplyr::select(gw_df,SNP),w_anno_df),replace=fl),-SNP))
+    colnames(anno_mat) <- ln[colnames(anno_mat)]
+    
+    #colnames(mymay$annomat) <- mymay$names
 
-     #elm_ret <- daprcpptest:::elastic_donut(locus = gw_df$locus,z = gw_df$`z-val`,X = mymay$annomat)
+    library(Matrix)
+    spX <- as(anno_mat,"sparseMatrix")
+    y <- runif(snpnum)
+    ym <- cbind(y,1-y)
+    tr <- glmnet::cv.glmnet(spX,ym,family="binomial")
+     (elm_ret <- daprcpptest:::elastic_donut(locus = gw_df$locus,z = gw_df$`z-val`,X = anno_mat)[-2])
+    (selm_ret <- daprcpptest:::elastic_donut_sp(locus = gw_df$locus,z = gw_df$`z-val`,X = spX)[-2])
     # 
-    elm_ret <- daprcpptest:::dap_donut(locus = gw_df$locus,z = gw_df$`z-val`,X = mymay$annomat)
+    # elm_ret <- daprcpptest:::dap_donut(locus = gw_df$locus,z = gw_df$`z-val`,X = mymay$annomat)
     # 
     tgf <- tempfile(fileext="tsv.gz")
     readr::write_delim(gw_df,path = tgf)
@@ -49,6 +67,62 @@ test_that("daprcpp and torus give similar results", {
     bt <- daprcpptest:::dap_torus(cmd)
     btl <- tidyr::unnest(daprcpptest:::parse_torus_s(bt$s,bt$lik),cols=c(data))
     testthat::expect_equal(unclass(ret),unclass(btl),tolerance=1e-5)
+  
+  
+})
+
+
+test_that("we can give lambda to both",{
+
+  
+  snpnum <- 10000
+  p <- 3
+  anno_r <- 250
+  set.seed(100)
+  ln <- letters[1:p]
+  names(ln) <- paste0(letters[1:p],"_d")
+  ct <- paste0(letters,"_d")[1:p]
+  fl <- as.list(rep(0,p))
+  names(fl) <- ct
+  anno_df <- tibble::tibble(SNP = sample(snpnum, anno_r, replace = T),
+                            feature = sample(paste0(letters,"_d")[1:p],anno_r, replace = T))
+  anno_df <- dplyr::distinct(anno_df,SNP,feature)
+  w_anno_df <- dplyr::mutate(anno_df,value=1L)
+  w_anno_df <- tidyr::spread(data=w_anno_df,key="feature",value="value",fill=0L)
+  
+  gw_df <- tibble::tibble(SNP = 1:snpnum, locus = cut(1:snpnum, breaks = 3L, labels = F),`z-val`=rnorm(n = snpnum))
+
+  
+  #mymay <- daprcpptest:::make_matrix(snpnum,anno_df)
+  
+  anno_mat <- data.matrix(dplyr::select(tidyr::replace_na(dplyr::left_join(dplyr::select(gw_df,SNP),w_anno_df),replace=fl),-SNP))
+  colnames(anno_mat) <- ln[colnames(anno_mat)]
+  
+  #colnames(mymay$annomat) <- mymay$names
+  
+  library(Matrix)
+  spX <- as(anno_mat,"sparseMatrix")
+ 
+  
+  
+  
+  (elm_ret <- daprcpptest:::elastic_donut(locus = gw_df$locus,z = gw_df$`z-val`,X = anno_mat,alpha = 0,lambda = 0.5)[-2])
+  (selm_ret <- daprcpptest:::elastic_donut_sp(locus = gw_df$locus,z = gw_df$`z-val`,X = spX,alpha=0,lambda=0.5)[-2])
+ 
+  tgf <- tempfile(fileext="tsv.gz")
+  readr::write_delim(gw_df,path = tgf)
+  taf <- tempfile(fileext="txt.gz")
+  readr::write_delim(w_anno_df,path = taf)
+  
+  
+  ret <- tidyr::unnest(daprcpp::run_torus_cmd(gf = tgf, af = taf,l2 = 0.5)$df,cols=c(data))
+  cmd <- daprcpptest:::gen_torus_cmd(gf = tgf, af = taf)
+  cmd <- cmd[!cmd%in%c("--load_zval","-est")]
+  bt <- daprcpptest:::dap_torus(cmd)
+  btl <- tidyr::unnest(daprcpptest:::parse_torus_s(bt$s,bt$lik),cols=c(data))
+  testthat::expect_equal(unclass(ret),unclass(btl),tolerance=1e-5)
+  
+  
   
   
 })

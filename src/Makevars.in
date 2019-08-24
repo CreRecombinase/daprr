@@ -1,5 +1,5 @@
 # set by configure
-CXX_STD = CXX17
+CXX_STD = CXX14
 GSL_CFLAGS = @GSL_CFLAGS@
 GSL_LIBS   = @GSL_LIBS@
 

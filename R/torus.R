@@ -10,6 +10,46 @@ write_anno <- function(anno_df=tibble(SNP=integer(),feature=character()),p=max(m
 }
 
 
+
+
+
+
+torus_glmnet <- function(X,gw_df){
+  
+  snpnum <- nrow(gw_df)
+  stopifnot(snpnum==nrow(X))
+  prior <- rep(1e-3,snpnum)
+  BF <- daprcpptest:::zhat2BF(gw_df$z)
+  splt <- daprcpptest:::new_splitter(as.integer(factor(gw_df$region_id)))
+  old_lik <- -9999
+  new_lik <- 0
+  thresh <- 0.01
+  it <- 1
+#  cl <- makeCluster(detectCores ())
+  # library(doMC)
+  # registerDoMC(cores=5)
+  while(abs(new_lik-old_lik)>thresh){
+  
+    ES_o <- daprcpptest:::Esteps(BF,prior,splt)
+    new_lik <- attr(ES_o,"lik")
+    ym <- cbind(1-ES_o,ES_o)
+    
+    mg <- glmnet::cv.glmnet(x = X,y=ym,family="binomial",alpha=0.95,parallel = T)
+    
+    prior <- c(predict.cv.glmnet(object = mg,newx = X,type="response",s="lambda.min"))
+    ES <- daprcpptest:::Esteps(BF,prior,splt)
+    old_lik <- new_lik
+    new_lik <- attr(ES,"lik")
+    if(it>20){
+      break
+    }
+    it <- it+1
+    cat(it,"\n")
+    print(coef.cv.glmnet(mg,s="lambda.min"))
+  }
+  saveRDS(mg,file="~/Dropbox/Repos/ptb_workflowr/data/coef.RDS")
+}
+
 #' Title
 #'
 #' @param s 

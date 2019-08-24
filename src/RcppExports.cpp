@@ -24,111 +24,55 @@ BEGIN_RCPP
     return rcpp_result_gen;
 END_RCPP
 }
-// dap_donut
-Rcpp::List dap_donut(Rcpp::IntegerVector locus, Rcpp::NumericVector z, Rcpp::NumericMatrix X, double EM_thresh, const double alpha, Rcpp::NumericVector lambda, const double prior_init);
-RcppExport SEXP _daprcpptest_dap_donut(SEXP locusSEXP, SEXP zSEXP, SEXP XSEXP, SEXP EM_threshSEXP, SEXP alphaSEXP, SEXP lambdaSEXP, SEXP prior_initSEXP) {
+// elastic_donut_sp
+Rcpp::List elastic_donut_sp(Rcpp::IntegerVector locus, Rcpp::NumericVector z, Rcpp::S4 X, double EM_thresh, const double alpha, Rcpp::NumericVector lambda, const double prior_init);
+RcppExport SEXP _daprcpptest_elastic_donut_sp(SEXP locusSEXP, SEXP zSEXP, SEXP XSEXP, SEXP EM_threshSEXP, SEXP alphaSEXP, SEXP lambdaSEXP, SEXP prior_initSEXP) {
 BEGIN_RCPP
     Rcpp::RObject rcpp_result_gen;
     Rcpp::RNGScope rcpp_rngScope_gen;
     Rcpp::traits::input_parameter< Rcpp::IntegerVector >::type locus(locusSEXP);
     Rcpp::traits::input_parameter< Rcpp::NumericVector >::type z(zSEXP);
-    Rcpp::traits::input_parameter< Rcpp::NumericMatrix >::type X(XSEXP);
+    Rcpp::traits::input_parameter< Rcpp::S4 >::type X(XSEXP);
     Rcpp::traits::input_parameter< double >::type EM_thresh(EM_threshSEXP);
     Rcpp::traits::input_parameter< const double >::type alpha(alphaSEXP);
     Rcpp::traits::input_parameter< Rcpp::NumericVector >::type lambda(lambdaSEXP);
     Rcpp::traits::input_parameter< const double >::type prior_init(prior_initSEXP);
-    rcpp_result_gen = Rcpp::wrap(dap_donut(locus, z, X, EM_thresh, alpha, lambda, prior_init));
+    rcpp_result_gen = Rcpp::wrap(elastic_donut_sp(locus, z, X, EM_thresh, alpha, lambda, prior_init));
     return rcpp_result_gen;
 END_RCPP
 }
-// predict_dap
-Rcpp::NumericVector predict_dap(Rcpp::NumericVector beta, Rcpp::IntegerMatrix X);
-RcppExport SEXP _daprcpptest_predict_dap(SEXP betaSEXP, SEXP XSEXP) {
-BEGIN_RCPP
-    Rcpp::RObject rcpp_result_gen;
-    Rcpp::RNGScope rcpp_rngScope_gen;
-    Rcpp::traits::input_parameter< Rcpp::NumericVector >::type beta(betaSEXP);
-    Rcpp::traits::input_parameter< Rcpp::IntegerMatrix >::type X(XSEXP);
-    rcpp_result_gen = Rcpp::wrap(predict_dap(beta, X));
-    return rcpp_result_gen;
-END_RCPP
-}
-// predict_glmnet
-Rcpp::NumericVector predict_glmnet(Rcpp::NumericVector beta, Rcpp::NumericMatrix X);
-RcppExport SEXP _daprcpptest_predict_glmnet(SEXP betaSEXP, SEXP XSEXP) {
-BEGIN_RCPP
-    Rcpp::RObject rcpp_result_gen;
-    Rcpp::RNGScope rcpp_rngScope_gen;
-    Rcpp::traits::input_parameter< Rcpp::NumericVector >::type beta(betaSEXP);
-    Rcpp::traits::input_parameter< Rcpp::NumericMatrix >::type X(XSEXP);
-    rcpp_result_gen = Rcpp::wrap(predict_glmnet(beta, X));
-    return rcpp_result_gen;
-END_RCPP
-}
-// z_to_BF
-Rcpp::NumericVector z_to_BF(Rcpp::NumericVector z_hat);
-RcppExport SEXP _daprcpptest_z_to_BF(SEXP z_hatSEXP) {
+// zhat2BF
+Rcpp::NumericVector zhat2BF(Rcpp::NumericVector z_hat);
+RcppExport SEXP _daprcpptest_zhat2BF(SEXP z_hatSEXP) {
 BEGIN_RCPP
     Rcpp::RObject rcpp_result_gen;
     Rcpp::RNGScope rcpp_rngScope_gen;
     Rcpp::traits::input_parameter< Rcpp::NumericVector >::type z_hat(z_hatSEXP);
-    rcpp_result_gen = Rcpp::wrap(z_to_BF(z_hat));
+    rcpp_result_gen = Rcpp::wrap(zhat2BF(z_hat));
     return rcpp_result_gen;
 END_RCPP
 }
-// make_matrix
-Rcpp::List make_matrix(const size_t p, Rcpp::DataFrame anno_df);
-RcppExport SEXP _daprcpptest_make_matrix(SEXP pSEXP, SEXP anno_dfSEXP) {
-BEGIN_RCPP
-    Rcpp::RObject rcpp_result_gen;
-    Rcpp::RNGScope rcpp_rngScope_gen;
-    Rcpp::traits::input_parameter< const size_t >::type p(pSEXP);
-    Rcpp::traits::input_parameter< Rcpp::DataFrame >::type anno_df(anno_dfSEXP);
-    rcpp_result_gen = Rcpp::wrap(make_matrix(p, anno_df));
-    return rcpp_result_gen;
-END_RCPP
-}
-// run_torus
-Rcpp::List run_torus(Rcpp::IntegerVector locus_id, Rcpp::NumericVector z_hat, RcppGSL::matrix<int> anno_mat, Rcpp::StringVector names, const bool prior, const bool do_verbose, bool use_glmnet);
-RcppExport SEXP _daprcpptest_run_torus(SEXP locus_idSEXP, SEXP z_hatSEXP, SEXP anno_matSEXP, SEXP namesSEXP, SEXP priorSEXP, SEXP do_verboseSEXP, SEXP use_glmnetSEXP) {
+// new_splitter
+Rcpp::IntegerVector new_splitter(Rcpp::IntegerVector locus_id);
+RcppExport SEXP _daprcpptest_new_splitter(SEXP locus_idSEXP) {
 BEGIN_RCPP
     Rcpp::RObject rcpp_result_gen;
     Rcpp::RNGScope rcpp_rngScope_gen;
     Rcpp::traits::input_parameter< Rcpp::IntegerVector >::type locus_id(locus_idSEXP);
-    Rcpp::traits::input_parameter< Rcpp::NumericVector >::type z_hat(z_hatSEXP);
-    Rcpp::traits::input_parameter< RcppGSL::matrix<int> >::type anno_mat(anno_matSEXP);
-    Rcpp::traits::input_parameter< Rcpp::StringVector >::type names(namesSEXP);
-    Rcpp::traits::input_parameter< const bool >::type prior(priorSEXP);
-    Rcpp::traits::input_parameter< const bool >::type do_verbose(do_verboseSEXP);
-    Rcpp::traits::input_parameter< bool >::type use_glmnet(use_glmnetSEXP);
-    rcpp_result_gen = Rcpp::wrap(run_torus(locus_id, z_hat, anno_mat, names, prior, do_verbose, use_glmnet));
+    rcpp_result_gen = Rcpp::wrap(new_splitter(locus_id));
     return rcpp_result_gen;
 END_RCPP
 }
-// torus_df
-Rcpp::List torus_df(Rcpp::IntegerVector locus_id, Rcpp::NumericVector z_hat, Rcpp::DataFrame anno_df, const bool prior, const bool do_verbose, bool use_glmnet);
-RcppExport SEXP _daprcpptest_torus_df(SEXP locus_idSEXP, SEXP z_hatSEXP, SEXP anno_dfSEXP, SEXP priorSEXP, SEXP do_verboseSEXP, SEXP use_glmnetSEXP) {
+// Esteps
+Rcpp::NumericVector Esteps(Rcpp::NumericVector BF, Rcpp::NumericVector prior, Rcpp::IntegerVector rle);
+RcppExport SEXP _daprcpptest_Esteps(SEXP BFSEXP, SEXP priorSEXP, SEXP rleSEXP) {
 BEGIN_RCPP
     Rcpp::RObject rcpp_result_gen;
     Rcpp::RNGScope rcpp_rngScope_gen;
-    Rcpp::traits::input_parameter< Rcpp::IntegerVector >::type locus_id(locus_idSEXP);
-    Rcpp::traits::input_parameter< Rcpp::NumericVector >::type z_hat(z_hatSEXP);
-    Rcpp::traits::input_parameter< Rcpp::DataFrame >::type anno_df(anno_dfSEXP);
-    Rcpp::traits::input_parameter< const bool >::type prior(priorSEXP);
-    Rcpp::traits::input_parameter< const bool >::type do_verbose(do_verboseSEXP);
-    Rcpp::traits::input_parameter< bool >::type use_glmnet(use_glmnetSEXP);
-    rcpp_result_gen = Rcpp::wrap(torus_df(locus_id, z_hat, anno_df, prior, do_verbose, use_glmnet));
-    return rcpp_result_gen;
-END_RCPP
-}
-// dap_torus
-Rcpp::List dap_torus(std::vector<std::string> argv);
-RcppExport SEXP _daprcpptest_dap_torus(SEXP argvSEXP) {
-BEGIN_RCPP
-    Rcpp::RObject rcpp_result_gen;
-    Rcpp::RNGScope rcpp_rngScope_gen;
-    Rcpp::traits::input_parameter< std::vector<std::string> >::type argv(argvSEXP);
-    rcpp_result_gen = Rcpp::wrap(dap_torus(argv));
+    Rcpp::traits::input_parameter< Rcpp::NumericVector >::type BF(BFSEXP);
+    Rcpp::traits::input_parameter< Rcpp::NumericVector >::type prior(priorSEXP);
+    Rcpp::traits::input_parameter< Rcpp::IntegerVector >::type rle(rleSEXP);
+    rcpp_result_gen = Rcpp::wrap(Esteps(BF, prior, rle));
     return rcpp_result_gen;
 END_RCPP
 }
@@ -137,14 +81,10 @@ RcppExport SEXP run_testthat_tests();
 
 static const R_CallMethodDef CallEntries[] = {
     {"_daprcpptest_elastic_donut", (DL_FUNC) &_daprcpptest_elastic_donut, 7},
-    {"_daprcpptest_dap_donut", (DL_FUNC) &_daprcpptest_dap_donut, 7},
-    {"_daprcpptest_predict_dap", (DL_FUNC) &_daprcpptest_predict_dap, 2},
-    {"_daprcpptest_predict_glmnet", (DL_FUNC) &_daprcpptest_predict_glmnet, 2},
-    {"_daprcpptest_z_to_BF", (DL_FUNC) &_daprcpptest_z_to_BF, 1},
-    {"_daprcpptest_make_matrix", (DL_FUNC) &_daprcpptest_make_matrix, 2},
-    {"_daprcpptest_run_torus", (DL_FUNC) &_daprcpptest_run_torus, 7},
-    {"_daprcpptest_torus_df", (DL_FUNC) &_daprcpptest_torus_df, 6},
-    {"_daprcpptest_dap_torus", (DL_FUNC) &_daprcpptest_dap_torus, 1},
+    {"_daprcpptest_elastic_donut_sp", (DL_FUNC) &_daprcpptest_elastic_donut_sp, 7},
+    {"_daprcpptest_zhat2BF", (DL_FUNC) &_daprcpptest_zhat2BF, 1},
+    {"_daprcpptest_new_splitter", (DL_FUNC) &_daprcpptest_new_splitter, 1},
+    {"_daprcpptest_Esteps", (DL_FUNC) &_daprcpptest_Esteps, 3},
     {"run_testthat_tests", (DL_FUNC) &run_testthat_tests, 0},
     {NULL, NULL, 0}
 };

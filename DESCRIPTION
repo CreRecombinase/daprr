@@ -11,7 +11,8 @@ License: GPL (>= 2)
 Imports: 
     Rcpp (>= 1.0.1),
     glmnet,
-    magrittr
+    magrittr,
+    rlang (>= 0.1.2)
 LinkingTo: 
     Rcpp,
     testthat,
@@ -19,6 +20,8 @@ LinkingTo:
     BH,
     RcppEigen
 Suggests: 
-    testthat
+    testthat,
+    roxygen2
 Roxygen: list(markdown = TRUE)
-RoxygenNote: 6.1.1
+RoxygenNote: 6.1.1.9000
+Encoding: UTF-8

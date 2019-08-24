@@ -735,7 +735,7 @@ double controller::fine_optimize_beta(int index, double est, double null_log10_l
   double term_vt  = est > 0 ? 0 : est;
 
   double term_v = est;
-  double null_v = 0;
+  double null_v = 0;  
   if(term_v > null_v){
     null_v = term_v;
     term_v = 0;

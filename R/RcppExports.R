@@ -15,7 +15,7 @@ elastic_donut <- function(locus, z, X, EM_thresh = 0.05, alpha = 0, lambda = as.
     .Call(`_daprcpptest_elastic_donut`, locus, z, X, EM_thresh, alpha, lambda, prior_init)
 }
 
-#' Estimate torus model using dap
+#' Estimate torus model using elasticnet
 #'
 #' @param locus
 #' @param z
@@ -25,45 +25,22 @@ elastic_donut <- function(locus, z, X, EM_thresh = 0.05, alpha = 0, lambda = as.
 #' @param
 #'
 #' @export
-dap_donut <- function(locus, z, X, EM_thresh = 0.05, alpha = 0, lambda = as.numeric( c(0)), prior_init = 1e-3) {
-    .Call(`_daprcpptest_dap_donut`, locus, z, X, EM_thresh, alpha, lambda, prior_init)
-}
-
-#' Predict using dap
-#'
-#'
-#' @export
-predict_dap <- function(beta, X) {
-    .Call(`_daprcpptest_predict_dap`, beta, X)
-}
-
-#' Predict using dap
-#'
-#'
-#' @export
-predict_glmnet <- function(beta, X) {
-    .Call(`_daprcpptest_predict_glmnet`, beta, X)
+elastic_donut_sp <- function(locus, z, X, EM_thresh = 0.05, alpha = 0, lambda = as.numeric( c(0)), prior_init = 1e-3) {
+    .Call(`_daprcpptest_elastic_donut_sp`, locus, z, X, EM_thresh, alpha, lambda, prior_init)
 }
 
 #' @export
-z_to_BF <- function(z_hat) {
-    .Call(`_daprcpptest_z_to_BF`, z_hat)
+zhat2BF <- function(z_hat) {
+    .Call(`_daprcpptest_zhat2BF`, z_hat)
 }
 
-make_matrix <- function(p, anno_df) {
-    .Call(`_daprcpptest_make_matrix`, p, anno_df)
+#' @export
+new_splitter <- function(locus_id) {
+    .Call(`_daprcpptest_new_splitter`, locus_id)
 }
 
-run_torus <- function(locus_id, z_hat, anno_mat, names, prior = FALSE, do_verbose = FALSE, use_glmnet = TRUE) {
-    .Call(`_daprcpptest_run_torus`, locus_id, z_hat, anno_mat, names, prior, do_verbose, use_glmnet)
-}
-
-torus_df <- function(locus_id, z_hat, anno_df, prior = FALSE, do_verbose = FALSE, use_glmnet = TRUE) {
-    .Call(`_daprcpptest_torus_df`, locus_id, z_hat, anno_df, prior, do_verbose, use_glmnet)
-}
-
-#'@export
-dap_torus <- function(argv) {
-    .Call(`_daprcpptest_dap_torus`, argv)
+#' @export
+Esteps <- function(BF, prior, rle) {
+    .Call(`_daprcpptest_Esteps`, BF, prior, rle)
 }
 
