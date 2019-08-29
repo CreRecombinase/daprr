@@ -43,6 +43,10 @@ write_gwas <- function(gwas_df,gf=tempfile(fileext=".txt.gz")){
 }
 
 
+
+
+
+
 #' Title
 #'
 #' @param gf 
@@ -55,7 +59,7 @@ write_gwas <- function(gwas_df,gf=tempfile(fileext=".txt.gz")){
 #' @importFrom Rcpp sourceCpp
 #'
 #' @examples
-run_torus_cmd <- function(gf,af,torus_p=character(0)){
+run_torus_cmd <- function(gf,af,torus_p=character(0),l1=NA_real_,l2=NA_real_){
   torus_path <- system.file("dap-master/torus_src/torus",package = "daprcpp")
   stopifnot(file.exists(torus_path),torus_path!="")
   stopifnot(file.exists(gf),
@@ -88,6 +92,12 @@ run_torus_cmd <- function(gf,af,torus_p=character(0)){
       lik_file
     )
   }
+  if(!is.na(l1)){
+    res_args <- c(res_args,"-l1_lambda",l1)
+  }
+  if(!is.na(l2)){
+    res_args <- c(res_args,"-l2_lambda",l2)
+  }
   res <- processx::run(torus_path,args = res_args,echo_cmd = TRUE,echo = TRUE)
   df <- read.table(file = textConnection(res$stdout),skip=1,header=F,stringsAsFactors = F)
   colnames(df) <- c("term", "estimate", "low", "high")
@@ -98,24 +108,57 @@ run_torus_cmd <- function(gf,af,torus_p=character(0)){
   file.remove(lik_file)
   df <- tidyr::nest(df) %>% dplyr::mutate(lik=lik)
   if(length(torus_p)>0){
-    stopifnot(all(fs::file_exists(p_f)))
-    prior_l <- purrr::map(torus_p,function(x){
-      fp <- as.character(fs::path(torus_d,x,ext="prior"))
-      suppressMessages(
-        ret <- vroom::vroom(file = fp,delim = "  ",trim_ws = T,col_names = c("SNP","prior"),col_types = cols("SNP"="i","prior"="d")) %>% dplyr::mutate(region_id=x)
-      )
-      return(ret)
-    })
-    fs::file_delete(p_f)
-    names(prior_l) <- torus_p
-    return(list(df=df,priors=prior_l))
+      stopifnot(all(fs::file_exists(p_f)))
+      prior_l <- purrr::map(torus_p,function(x){
+          fp <- as.character(fs::path(torus_d,x,ext="prior"))
+          suppressMessages(
+              ret <- vroom::vroom(file = fp,delim = "  ",trim_ws = T,col_names = c("SNP","prior"),col_types = cols("SNP"="i","prior"="d")) %>% dplyr::mutate(region_id=x)
+          )
+          return(ret)
+      })
+      fs::file_delete(p_f)
+      names(prior_l) <- torus_p
+      ret <- list(df=df,priors=prior_l)
   }else{
-    return(list(df=df))
+      ret <- list(df=df)
   }
+  return(ret)
 }
 
 
 
+
+#' Title
+#'
+#' @param gf 
+#' @param af 
+#'
+#' @return
+#' @export
+#'
+#' @examples
+torus_fdr <- function(gf,af){
+  torus_path <- system.file("dap-master/torus_src/torus",package = "daprcpp")
+  stopifnot(file.exists(torus_path),torus_path!="")
+  stopifnot(file.exists(gf),
+            file.exists(af))
+  fo <- fs::file_info(torus_path)
+  stopifnot((fo$permissions & "u+x") == "u+x")
+  qtl_file <- fs::file_temp()
+  res_args <- c(
+    "-d",
+    fs::path_expand(gf),
+    "-annot",
+    fs::path_expand(af),
+    "--load_zval",
+    "-qtl",
+    qtl_file
+  )
+  res <- processx::run(torus_path,args = res_args,echo_cmd = TRUE,echo = TRUE)
+  fdr_res <- readr::read_tsv(qtl_file,col_names = c("rej","region_id","fdr","decision"))
+  fs::file_delete(qtl_file)
+  return(fdr_res)  
+}
 
 
 #' Title

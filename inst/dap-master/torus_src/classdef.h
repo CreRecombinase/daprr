@@ -166,7 +166,7 @@ class controller {
   void run_EM();
 
   
-  void find_eGene(double thresh=0.05);
+  void find_eGene(const char* qtl_file,double thresh=0.05);
   void estimate();
   void dump_prior(char *path);
   void dump_pip(char *file);
