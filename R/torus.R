@@ -26,10 +26,16 @@ write_anno <- function(anno_df=tibble(SNP=integer(),feature=character()),p=max(m
 #' @export
 #'
 #' @examples
-torus_glmnet <- function(X,z,region_id,alpha=0.95,lambda=NULL,EM_thresh=0.05,prior_init=1e-3,parallel=FALSE){
+torus_glmnet <- function(X,z,region_id,nfolds=10,alpha=0.95,lambda=NULL,EM_thresh=0.05,prior_init=1e-3,...){
   snpnum <- length(z)
+  uf_id <- sample(unique(region_id))
+  n_reg <- length(uf_id)
+  uid <- ((1:n_reg) %% nfolds)+1
+  names(uid) <- uf_id
+  folds <- uid[region_id]
   stopifnot(snpnum==nrow(X),
             snpnum==length(region_id))
+  
   prior <- rep(prior_init,snpnum)
   BF <- daprcpptest:::zhat2BF(z)
   splt <- daprcpptest:::new_splitter(as.integer(factor(gw_df$region_id)))
@@ -40,7 +46,12 @@ torus_glmnet <- function(X,z,region_id,alpha=0.95,lambda=NULL,EM_thresh=0.05,pri
     ES_o <- daprcpptest:::Esteps(BF,prior,splt)
     new_lik <- attr(ES_o,"lik")
     ym <- cbind(1-ES_o,ES_o)
-    mg <- glmnet::cv.glmnet(x = X,y=ym,family="binomial",alpha=0.95,parallel = parallel)
+    mg <- glmnet::cv.glmnet(x = X,y=ym,family="binomial",alpha=alpha,lambda=lambda,foldid = folds,...)
+    a_prior <- map(mg$lambda,
+                   ~c(glmnet::predict.cv.glmnet(object = mg,newx = X,type="response",s=.x))
+                   )
+    a_ES <- map(a_prior,~daprcpptest:::Esteps(BF,.x,splt))
+    a_lik <- map_dbl(a_ES,~attr(.x,"lik"))
     prior <- c(glmnet::predict.cv.glmnet(object = mg,newx = X,type="response",s="lambda.min"))
     ES <- daprcpptest:::Esteps(BF,prior,splt)
     old_lik <- new_lik
@@ -53,6 +64,21 @@ torus_glmnet <- function(X,z,region_id,alpha=0.95,lambda=NULL,EM_thresh=0.05,pri
     cat(it,"\n")
   }
  return(mg)
+}
+
+
+
+fps <- function(betav,X,BF,splt){
+  prior <- 1/(1+exp(-c(as.matrix(betav[1]+X%*%betav[-1]))))
+  ES_o <- daprcpptest:::Esteps(BF,prior,splt)
+  ym <- cbind(1-ES_o,ES_o)
+  mg <- glmnet::cv.glmnet(x = X,
+                          y=ym,
+                          family="binomial",
+                          alpha=0.95,
+                          parallel = TRUE,
+                          lambda=10^(-seq(from=5,to=10,length.out=100)))
+  return(c(as.matrix(coef(mg))))
 }
 
 #' Title

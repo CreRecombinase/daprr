@@ -103,9 +103,9 @@ Lognet::Lognet(const Rcpp::NumericMatrix X_, const double alpha_,std::vector<dou
     }
   }
 
-void Lognet::fit(const gsl::span<double> yd){
+void Lognet::fit(const Eigen::Map<Eigen::ArrayXd> yd){
 
-  y.col(0)=  Eigen::Map<Eigen::ArrayXd>(yd.data(),yd.size());
+  y.col(0)=  yd;
   y.col(1)=1-y.col(0).array();
   x=x_o;
   o.setZero();
@@ -211,9 +211,9 @@ void Lognet::fit(const gsl::span<double> yd){
   // Eigen::Map<Eigen::ArrayXd > coeff_v(ca.data(),lmu*ni);
 }
 
-void spLognet::fit(const gsl::span<double> yd){
+void spLognet::fit(const Eigen::Map<Eigen::ArrayXd> yd){
 
-  y.col(0)=  Eigen::Map<Eigen::ArrayXd>(yd.data(),yd.size());
+  y.col(0)=  yd;
   y.col(1)=1-y.col(0).array();
 
   //  x=x_o;
@@ -314,20 +314,20 @@ void spLognet::fit(const gsl::span<double> yd){
     coeff.unpack_coeffs();
 }
 
-void Lognet::read_coeffs(gsl::span<double> beta,int index){
+void Lognet::read_coeffs(Eigen::Map<Eigen::ArrayXd> beta,int index){
   beta[0]=coeff.a0[index];
   Eigen::VectorXd tcol=coeff.retcoeff.col(index);
-  std::copy_n(tcol.data(),tcol.size(),beta.begin()+1);
+  std::copy_n(tcol.data(),tcol.size(),beta.data()+1);
 }
 
-void spLognet::read_coeffs(gsl::span<double> beta,int index){
+void spLognet::read_coeffs(Eigen::Map<Eigen::ArrayXd> beta,int index){
   beta[0]=coeff.a0[index];
   Eigen::VectorXd tcol=coeff.retcoeff.col(index);
-  std::copy_n(tcol.data(),tcol.size(),beta.begin()+1);
+  std::copy_n(tcol.data(),tcol.size(),beta.data()+1);
 }
 
-void Lognet::predict(const gsl::span<double> beta,
-                               gsl::span<double> yhat) const {
+void Lognet::predict(const Eigen::Map<Eigen::ArrayXd> beta,
+                               Eigen::Map<Eigen::ArrayXd> yhat) const {
 
   if (beta.size() != (p + 1)) {
     Rcpp::stop("size of beta is " + std::to_string(beta.size()) + " in predict");
@@ -336,7 +336,7 @@ void Lognet::predict(const gsl::span<double> beta,
     Rcpp::stop("size of y is " + std::to_string(yhat.size()) + " and not " +
                std::to_string(n) + "in predict");
   }
-  Eigen::Map<Eigen::VectorXd> beta_v(beta.subspan(1, p).data(), p);
+  const Eigen::Map<const Eigen::VectorXd> beta_v(beta.data()+1,p);
   Eigen::Map<Eigen::VectorXd> y_v(yhat.data(), yhat.size());
 
   this->y.col(0) = (x_o * beta_v);
@@ -347,8 +347,8 @@ void Lognet::predict(const gsl::span<double> beta,
 
 
 
-void spLognet::predict(const gsl::span<double> beta,
-                               gsl::span<double> yhat) const {
+void spLognet::predict(const Eigen::Map<Eigen::ArrayXd> beta,
+                               Eigen::Map<Eigen::ArrayXd> yhat) const {
 
   if (beta.size() != (p + 1)) {
     Rcpp::stop("size of beta is " + std::to_string(beta.size()) + " in predict");
@@ -357,7 +357,7 @@ void spLognet::predict(const gsl::span<double> beta,
     Rcpp::stop("size of y is " + std::to_string(yhat.size()) + " and not " +
                std::to_string(n) + "in predict");
   }
-  Eigen::Map<Eigen::VectorXd> beta_v(beta.subspan(1, p).data(), p);
+  Eigen::Map<const Eigen::VectorXd> beta_v(beta.data()+1, p);
   Eigen::Map<Eigen::VectorXd> y_v(yhat.data(), yhat.size());
 
   this->y.col(0) = (x_o.MapMatrix() * beta_v);

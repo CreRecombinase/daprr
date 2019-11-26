@@ -1,12 +1,12 @@
 #pragma once
 
-#include <gsl/span>
+
 #include <fmt/printf.h>
 #include <fmt/format.h>
 #include <RcppEigen.h>
 #include "dataview.hpp"
 
-using SplitView = std::vector< gsl::span<double> >;
+using SplitView = std::vector< Eigen::Map<Eigen::ArrayXd> >;
 
 namespace elasticdonut {
 
@@ -221,10 +221,10 @@ public:
 
   class Net {
   public:
-    virtual void fit(const gsl::span<double> yd) =0;
+    virtual void fit(const Eigen::Map<Eigen::ArrayXd> yd) =0;
     virtual std::vector<std::string> get_names() const = 0;
-    virtual void read_coeffs(gsl::span<double> beta,int index=0) = 0;
-    virtual void predict(const gsl::span<double> beta,gsl::span<double> yhat) const = 0;
+    virtual void read_coeffs(Eigen::Map<Eigen::ArrayXd> beta,int index=0) = 0;
+    virtual void predict(const Eigen::Map<Eigen::ArrayXd> beta,Eigen::Map<Eigen::ArrayXd> yhat) const = 0;
     virtual size_t snp_num() const = 0;
     virtual size_t feature_num() const = 0;
   };
@@ -265,9 +265,9 @@ public:
     const bool stop_on_nonfatal;
   public:
     Lognet(const Rcpp::NumericMatrix X_, const double alpha_=0,std::vector<double> lambda= {0},const double thresh=1e-07,const int maxiter=100000);
-    void fit(const gsl::span<double> yd);
-    void read_coeffs(gsl::span<double> beta,int index=0);
-    void predict(const gsl::span<double> beta,gsl::span<double> yhat)const;
+    void fit(const Eigen::Map<Eigen::ArrayXd> yd);
+    void read_coeffs(Eigen::Map<Eigen::ArrayXd> beta,int index=0);
+    void predict(const Eigen::Map<Eigen::ArrayXd> beta,Eigen::Map<Eigen::ArrayXd> yhat)const;
     size_t snp_num() const { return n; }
     size_t feature_num() const { return p+1; }
     std::vector<std::string> get_names() const { return names; }
@@ -335,9 +335,9 @@ public:
     spLognet(Rcpp::S4 X_, const double alpha_ = 0,
              std::vector<double> lambda = {0}, const double thresh = 1e-07,
              const int maxiter = 100000);
-    void fit(const gsl::span<double> yd);
-    void read_coeffs(gsl::span<double> beta, int index = 0);
-    void predict(const gsl::span<double> beta, gsl::span<double> yhat) const;
+    void fit(const Eigen::Map<Eigen::ArrayXd> yd);
+    void read_coeffs(Eigen::Map<Eigen::ArrayXd> beta, int index = 0);
+    void predict(const Eigen::Map<Eigen::ArrayXd> beta, Eigen::Map<Eigen::ArrayXd> yhat) const;
     size_t snp_num() const { return n; }
     size_t feature_num() const { return p+1; }
     std::vector<std::string> get_names() const { return x_o.names(); }

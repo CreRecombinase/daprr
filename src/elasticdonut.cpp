@@ -4,14 +4,14 @@
 
 namespace elasticdonut {
 
-  using SplitView = std::vector< gsl::span<double> >;
+  using SplitView = std::vector< Eigen::Map<Eigen::ArrayXd> >;
 
 
 
-  double prior_to_pip(gsl::span<double> pip,const gsl::span<double> prior,const bool fix_pi0=true){
+  double prior_to_pip(Eigen::Map<Eigen::ArrayXd> pip,const Eigen::Map<Eigen::ArrayXd> prior,const bool fix_pi0=true){
 
   double locus_pi0=1;
-  std::transform(prior.begin(),prior.end(),pip.begin(),[&locus_pi0](double prior){
+  std::transform(begin(prior),end(prior),begin(pip),[&locus_pi0](double prior){
 							 locus_pi0*=(1-prior);
 							 return(prior/(1-prior));
 						       });
@@ -19,32 +19,32 @@ namespace elasticdonut {
     locus_pi0 = 1e-100;
   }
 
-  for(auto &p_v : pip)
-    p_v *= locus_pi0;
+  pip *= locus_pi0;
+  // for(auto &p_v : pip)
+  //   p_v *= locus_pi0;
   return locus_pi0;
 
   }
 
 
-void transform_pip(gsl::span<double> pip,const gsl::span<double> BF,const double log10lik){
+void transform_pip(Eigen::Map<Eigen::ArrayXd> pip,const Eigen::Map<Eigen::ArrayXd> BF,const double log10lik){
 
-  std::transform(pip.begin(),pip.end(),BF.begin(),pip.begin(),
-		 [log10lik](double prior,double log10_BF){
-		   return pow(10,(log10(prior) + log10_BF - log10lik));
-		 });
+  std::transform(begin(pip), end(pip), cbegin(BF), begin(pip),
+                 [log10lik](double prior, double log10_BF) {
+                   return pow(10, (log10(prior) + log10_BF - log10lik));
+                 });
 }
 
-
-double log10_lik(const double locus_pi0,const gsl::span<double> BF, const gsl::span<double> pip,double* BF_max){
+double log10_lik(const double locus_pi0,const Eigen::Map<Eigen::ArrayXd> BF, const Eigen::Map<Eigen::ArrayXd> pip,const double* BF_max){
   if(BF_max==nullptr){
-    BF_max =  &(*(std::max_element(BF.begin(),BF.end())));
+    BF_max =  &(*(std::max_element(cbegin(BF),cend(BF))));
   }
   double max_el = std::max(*BF_max,0.0);
   double sum = locus_pi0*pow(10,0-max_el);
 
-  double log10lik =	std::inner_product(BF.begin(),
-					   BF.end(),
-					   pip.begin(),
+  double log10lik =	std::inner_product(begin(BF),
+					   end(BF),
+					   begin(pip),
 					   sum,std::plus<>(),
 					   [max_el](double vec,double wts){
 					     return(wts*pow(10,vec-max_el));});
@@ -54,7 +54,7 @@ double log10_lik(const double locus_pi0,const gsl::span<double> BF, const gsl::s
 
 
 
-double E_step(const gsl::span<double> pip,const gsl::span<double> BF, const gsl::span<double> prior,double* BF_max){
+double E_step(const Eigen::Map<Eigen::ArrayXd> pip,const Eigen::Map<Eigen::ArrayXd> BF, const Eigen::Map<Eigen::ArrayXd> prior,double* BF_max){
 
   double locus_pi0=  prior_to_pip(pip,prior);
 
@@ -64,7 +64,7 @@ double E_step(const gsl::span<double> pip,const gsl::span<double> BF, const gsl:
   return(lik10);
 }
 
-double fdr(double log10lik,const gsl::span<double> BF, const gsl::span<double> prior,gsl::span<double> pip,double* BF_max){
+double fdr(double log10lik,const Eigen::Map<Eigen::ArrayXd> BF, const Eigen::Map<Eigen::ArrayXd> prior,Eigen::Map<Eigen::ArrayXd> pip,const double* BF_max){
 
 
   double locus_pi0=prior_to_pip(prior,pip,false);
@@ -74,7 +74,7 @@ double fdr(double log10lik,const gsl::span<double> BF, const gsl::span<double> p
   log10lik = log10_lik(locus_pi0,BF,prior,BF_max);
 
   if (!BF_max) {
-    BF_max = &(*(std::max_element(BF.begin(), BF.end())));
+    BF_max = &(*(std::max_element(cbegin(BF), cend(BF))));
   }
   double max_el = std::max(*BF_max,0.0);
   log10lik = max_el + log10(log10lik);
@@ -86,7 +86,7 @@ double fdr(double log10lik,const gsl::span<double> BF, const gsl::span<double> p
 
 
 
-// double evaluate_likelihood(GroupedView &prior, const gsl::span<double> beta,
+// double evaluate_likelihood(GroupedView &prior, const Eigen::Map<Eigen::ArrayXd> beta,
 //                            SumStatRegion &sumstats, const Net &logistic) {
 //   logistic.predict(beta, prior.d_view);
 //   return sumstats.E_steps(prior.r_view);
@@ -110,7 +110,7 @@ double fdr(double log10lik,const gsl::span<double> BF, const gsl::span<double> p
     return loglik;
   }
   size_t SumStatRegion::size() const { return BF.p; }
-  gsl::span<double> SumStatRegion::pip() { return p_view.d_view; }
+  Eigen::Map<Eigen::ArrayXd> SumStatRegion::pip() { return p_view.d_view; }
 
 
 
@@ -119,15 +119,15 @@ double fdr(double log10lik,const gsl::span<double> BF, const gsl::span<double> p
 std::vector<double> make_BF(Rcpp::NumericVector z_hat){
     std::vector<double> BFv(z_hat.size());
     BF bf;
-    std::transform(z_hat.begin(),z_hat.end(),BFv.begin(),[&bf](double z){
+    std::transform(std::begin(z_hat),std::end(z_hat),BFv.begin(),[&bf](double z){
 							   return(bf.compute_log10_BF(z));});
     return BFv;
 }
 
-std::vector<double> make_BF(const gsl::span<double> z_hat){
+std::vector<double> make_BF(const Eigen::Map<Eigen::ArrayXd> z_hat){
   std::vector<double> BFv(z_hat.size());
   BF bf;
-  std::transform(z_hat.begin(),z_hat.end(),BFv.begin(),[&bf](double z){
+  std::transform(begin(z_hat),end(z_hat),begin(BFv),[&bf](double z){
 							 return(bf.compute_log10_BF(z));});
   return BFv;
 }
@@ -167,8 +167,7 @@ double BF::compute_log10_BF(const double z_score) const {
 
 
 
-
-  double ElasticDonut::fine_optimize_beta(gsl::span<double> new_beta,const size_t index,GroupedView &null_prior,double &log10_lik){
+  double ElasticDonut::fine_optimize_beta(Eigen::Map<Eigen::ArrayXd> new_beta,const size_t index,GroupedView &null_prior,double &log10_lik){
 
     const double gr = (std::sqrt(5)-1)/2.0;
     double a = new_beta[index];
@@ -224,7 +223,7 @@ ElasticDonut::ElasticDonut(GroupedView BF_v, Net &logn,
         names(logistic.get_names()), beta(logistic.feature_num(), 0.0),
         sd(logistic.feature_num(), 0.0), curr_log10_lik(0.0),
         EM_thresh(EM_thresh_) {
-    names.insert(names.begin(), "Intercept");
+    names.insert(begin(names), "Intercept");
   }
 
 double ElasticDonut::fit(bool keep_prior){
@@ -245,12 +244,12 @@ double ElasticDonut::fit(bool keep_prior){
       curr_log10_lik = sumstats.E_steps(prior_r);
       logistic.fit(sumstats.pip());
       Rcpp::Rcerr<<iter_ct<<"\t"<<curr_log10_lik/log10(exp(1));
-      logistic.read_coeffs(beta);
+      logistic.read_coeffs(toMapXd(beta));
       for (auto bv : beta) {
         Rcpp::Rcerr << "\t" << bv;
       }
       Rcpp::Rcerr << std::endl;
-      logistic.predict(beta, prior);
+      logistic.predict(toMapXd(beta), prior);
       iter_ct++;
     }
     std::vector<double> null_beta=beta;
@@ -260,13 +259,13 @@ double ElasticDonut::fit(bool keep_prior){
     for (int i = 0; i < bs; i++) {
       double tbeta=null_beta[i];
       null_beta[i]=0;
-      logistic.predict(null_beta,null_pview.d_view);
+      logistic.predict(toMapXd(null_beta),null_pview.d_view);
       double null_lik = sumstats.E_steps(null_pview.r_view);
       double tdiff = (curr_log10_lik - null_lik)/log10(exp(1));
       if (tdiff < 0 && i > 0) {
         double log10_lik = curr_log10_lik;
 	null_beta[i]=tbeta;
-        beta[i] = fine_optimize_beta(null_beta, i, null_pview, log10_lik);
+        beta[i] = fine_optimize_beta(toMapXd(null_beta), i, null_pview, log10_lik);
         tdiff = (log10_lik - null_lik) / log10(exp(1));
       }
       if (tdiff < 1e-8) {
@@ -301,8 +300,8 @@ Rcpp::List elastic_donut(Rcpp::IntegerVector locus,Rcpp::NumericVector z, Rcpp::
   const size_t p = locus.size();
   auto BF_d =	elasticdonut::make_BF(z);
 
-  int *locb =&(*locus.begin());
-  auto splt = make_splitter(gsl::span<int>(locb,locus.size()));
+  //  int *locb =&(*std::begin(locus));
+  auto splt = make_splitter((locus));
   GroupedView BF_v(splt.split_view(&BF_d.front()),p);
 
   elasticdonut::Lognet ln(X,alpha,Rcpp::as<std::vector<double> >(lambda));
@@ -339,8 +338,7 @@ Rcpp::List elastic_donut_sp(Rcpp::IntegerVector locus,Rcpp::NumericVector z, Rcp
   const size_t p = locus.size();
   auto BF_d =	elasticdonut::make_BF(z);
 
-  int *locb =&(*locus.begin());
-  auto splt = make_splitter(gsl::span<int>(locb,locus.size()));
+  auto splt = make_splitter(locus);
   GroupedView BF_v(splt.split_view(&BF_d.front()),p);
 
   elasticdonut::spLognet ln(X,alpha,Rcpp::as<std::vector<double> >(lambda));
@@ -363,7 +361,7 @@ Rcpp::List elastic_donut_sp(Rcpp::IntegerVector locus,Rcpp::NumericVector z, Rcp
 Rcpp::NumericVector zhat2BF(Rcpp::NumericVector z_hat){
   Rcpp::NumericVector BFv(z_hat.size());
   elasticdonut::BF bf;
-  std::transform(z_hat.begin(),z_hat.end(),BFv.begin(),[&bf](double z){
+  std::transform(std::begin(z_hat),std::end(z_hat),std::begin(BFv),[&bf](double z){
 							 return(bf.compute_log10_BF(z));});
   return BFv;
 }
@@ -373,8 +371,7 @@ Rcpp::NumericVector zhat2BF(Rcpp::NumericVector z_hat){
 //' @export
 //[[Rcpp::export]]
 Rcpp::IntegerVector new_splitter(Rcpp::IntegerVector locus_id) {
-  auto splt =
-      make_splitter(gsl::span<int>(&(*locus_id.begin()), locus_id.size()));
+  auto splt = make_splitter(locus_id);
   return splt.export_rle();
 }
 
@@ -387,8 +384,8 @@ Rcpp::NumericVector Esteps(Rcpp::NumericVector BF, Rcpp::NumericVector prior,Rcp
 
   splitter splt(rle);
   double *BFb =	&(BF[0]);
-  gsl::span<double> BF_s(BFb,BF.size());
-  elasticdonut::SumStatRegion BF_v(splt.group_view(&(*BF.begin())));
+  Eigen::Map<Eigen::ArrayXd> BF_s(BFb,BF.size());
+  elasticdonut::SumStatRegion BF_v(splt.group_view(&(*std::begin(BF))));
   auto prior_v = BF_v.BF.copy_view(prior);
   // Rcpp::NumericVector pip(prior.size(),0.0);
   // auto pip_v = prior_v.copy_view(pip);

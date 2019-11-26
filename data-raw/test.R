@@ -4,6 +4,9 @@ library(tidyverse)
 library(daprcpp)
 gf <- system.file("gwas_z_t.txt.gz", package = "daprcpp")
 af <- system.file("gwas_anno_t.txt.gz", package = "daprcpp")
+
+gw_df <- readr::read_delim(gf,delim=" ")
+
 gw_df <- read_delim(gf,delim = " ") %>% mutate(snp_id=1:n(),locus_id=as.integer(factor(locus)))  
 anno_df <- read_tsv(af) %>% inner_join(select(gw_df,SNP,snp_id))
 anno_f <- "/home/nwknoblauch//Dropbox/Repos/dap/torus_src/little_gwas_anno.tsv.zstd"

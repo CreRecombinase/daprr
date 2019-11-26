@@ -64,14 +64,10 @@ typename std::enable_if<!std::numeric_limits<T>::is_integer, bool>::type
 }
 
 
-bool almost_equal_span(gsl::span<double> a, gsl::span<double> b){
-
-  return std::equal(a.begin(), a.end(), b.begin(), b.end(),
-                    [](double ta, double tb) { return almost_equal(ta, tb); });
-}
 
 
-gsl_vector *view_span(gsl::span<double> data) {
+template<typename T>
+gsl_vector *view_span(T data) {
 
   const size_t n = data.size();
   gsl_vector *ret = new gsl_vector;
@@ -98,7 +94,7 @@ FileZscoreParser zsp(gwas_file.c_str());
    tLoc->EM_update();
    const auto log10_lik = tLoc->log10_lik;
    double* BFm = nullptr;
-   auto comp_log10_lik = elasticdonut::E_step(pip,BFd,prior,BFm);
+   auto comp_log10_lik = elasticdonut::E_step(toMapXd(pip),toMapXd(BFd),toMapXd(prior),BFm);
 
    expect_true(almost_equal(comp_log10_lik,log10_lik));
 
@@ -119,7 +115,7 @@ FileZscoreParser zsp(gwas_file.c_str());
 
    auto locus = con.get_region_id();
    int *locb =&(*locus.begin());
-   auto splt = make_splitter(gsl::span<int>(locb,locus.size()));
+   auto splt = make_splitter(Rcpp::wrap(locus));
    auto tLoc = con.locVec.begin();
 
    auto BFd = con.get_BF();
@@ -149,10 +145,7 @@ FileZscoreParser zsp(gwas_file.c_str());
    double result_b = sumstats.E_steps(prior_view.r_view);
    expect_true(almost_equal(result_a,result_b));
    auto	pip_d =	sumstats.pip();
-   bool all_eq_pip =
-       std::equal(pip.begin(), pip.end(), pip_d.begin(),
-                  pip_d.end(),
-                  [](double a, double b) { return almost_equal(a, b); });
+   bool all_eq_pip = toMapXd(pip).isApprox(pip_d);
    expect_true(all_eq_pip);
  }
 }

@@ -2,9 +2,36 @@
 #include "glmnet.hpp"
 
 
+inline int* begin(Eigen::Map<Eigen::ArrayXi>& m) { return m.data(); }
+inline int* end(Eigen::Map<Eigen::ArrayXi>& m) { return m.data()+m.size(); }
+inline const int* cbegin(Eigen::Map<Eigen::ArrayXi>& m) { return m.data(); }
+inline const int* cend(Eigen::Map<Eigen::ArrayXi>& m) { return m.data()+m.size(); }
+inline const int* begin(Eigen::Map<Eigen::ArrayXi> const& m) { return m.data(); }
+inline const int* end(Eigen::Map<Eigen::ArrayXi> const& m) { return m.data()+m.size(); }
+
+inline double* begin(Eigen::Map<Eigen::ArrayXd>& m) { return m.data(); }
+inline double* end(Eigen::Map<Eigen::ArrayXd>& m) { return m.data()+m.size(); }
+inline const double* begin(Eigen::Map<Eigen::ArrayXd> const& m) { return m.data(); }
+inline const double* end(Eigen::Map<Eigen::ArrayXd> const& m) { return m.data()+m.size(); }
+inline const double* cbegin(const Eigen::Map<Eigen::ArrayXd> & m) { return m.data(); }
+inline const double* cend(const Eigen::Map<Eigen::ArrayXd> & m) { return m.data()+m.size(); }
+
+inline Eigen::Map<Eigen::ArrayXd> toMapXd(std::vector<double>& data){
+  return(Eigen::Map<Eigen::ArrayXd>(data.data(),data.size()));
+}
+
+inline Eigen::Map<Eigen::ArrayXi> toMapXi(std::vector<int>& data){
+  return(Eigen::Map<Eigen::ArrayXi>(data.data(),data.size()));
+}
+
+// inline Eigen::Map<Eigen::ArrayXi> toMapXi(std::vector<int>& data){
+//   return(Eigen::Map<Eigen::ArrayXi>(data.data(),data.size()));
+// }
+
+
 
 namespace elasticdonut {
-using SplitView = std::vector< gsl::span<double> >;
+using SplitView = std::vector< Eigen::Map<Eigen::ArrayXd> >;
 
 
 
@@ -25,7 +52,7 @@ public:
 };
 
   std::vector<double> make_BF(Rcpp::NumericVector z_hat);
-  std::vector<double> make_BF(const gsl::span<double> z_hat);
+  std::vector<double> make_BF(const Eigen::Map<Eigen::ArrayXd> z_hat);
 
 // SumStatRegion is a non-owning view of the summary statistics
 class SumStatRegion {
@@ -43,7 +70,7 @@ class SumStatRegion {
     SumStatRegion(const GroupedView BF_);
     double E_steps(const SplitView &r_prior);
     size_t size() const;
-    gsl::span<double> pip();
+    Eigen::Map<Eigen::ArrayXd> pip();
   };
 
 
@@ -65,10 +92,10 @@ class SumStatRegion {
     ElasticDonut(GroupedView BF_v, Net &logn,
                  const double prior_init = 1e-3, double EM_thresh_ = 0.05);
     double fit(bool keep_prior=true);
-    double fine_optimize_beta(gsl::span<double> new_beta,const size_t index,GroupedView &null_prior,double &log10_lik);
+    double fine_optimize_beta(Eigen::Map<Eigen::ArrayXd> new_beta,const size_t index,GroupedView &null_prior,double &log10_lik);
   };
-  double E_step(const gsl::span<double> pip, const gsl::span<double> BF,
-		const gsl::span<double> prior, double* BF_max);
+  double E_step(const Eigen::Map<Eigen::ArrayXd> pip, const Eigen::Map<Eigen::ArrayXd> BF,
+		const Eigen::Map<Eigen::ArrayXd> prior, double* BF_max);
 
 
     } // namespace elasticdonut

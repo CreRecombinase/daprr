@@ -5,15 +5,19 @@
 #include <iostream>
 #include <fstream>
 #include <sstream>
-#include "gsl/span"
 #include <RcppEigen.h>
- #include <stdio.h>
-
+#include <cstdio>
+#include <type_traits>
+#include <iterator>
+#include "elasticdonut.hpp"
  #ifdef NDEBUG
  # define assertr(EX)
  #else
  # define assertr(EX) (void)((EX) || (__assert (#EX, __FILE__, __LINE__),0))
  #endif
+
+
+
 
 
 
@@ -25,7 +29,7 @@ inline  void __assert(const char *msg, const char *file, const int line) {
   throw Rcpp::exception(buffer);
 }
 
-template<typename T,typename IT=Rcpp::IntegerVector::iterator>
+template<typename T,typename IT>
 class ProxyTrip {
 
   IT rvec;
@@ -90,7 +94,7 @@ class Zip {
   IT rvec;
   IT cvec;
   T  dvec;
-  using ret_tt = typename T::value_type;
+  using ret_tt = typename std::remove_pointer<IT>::type;
   using trip_t =   Eigen::Triplet<ret_tt,typename Eigen::SparseMatrix<ret_tt>::StorageIndex>;
   trip_t ret;
 
@@ -114,7 +118,6 @@ public:
     cvec--;
     dvec--;
     return *this;
-
   }
 
   Zip operator++(int){ // postfix
@@ -146,33 +149,6 @@ public:
 };
 
 
-class Writer{
-
-
-  virtual void writeData(std::string field,double data) = 0;
-  virtual void writeData(std::string field,int data) = 0;
-  virtual void writeData(std::string field,std::string data) = 0;
-
-  virtual double readData_d(std::string field,double data) = 0;
-  virtual void readData_i(std::string field,int data) = 0;
-  virtual void readData_s(std::string field,std::string data) = 0;
-
-};
-
-
-
-class FileWriter{
-
-
-  virtual void writeData(std::string field,double data) = 0;
-  virtual void writeData(std::string field,int data) = 0;
-  virtual void writeData(std::string field,std::string data) = 0;
-
-  virtual double readData_d(std::string field,double data) = 0;
-  virtual void readData_i(std::string field,int data) = 0;
-  virtual void readData_s(std::string field,std::string data) = 0;
-
-};
 
 
 
@@ -182,8 +158,8 @@ class FileWriter{
 class AnnotationParser {
 
 public:
-  using Xd_pt = ProxyTrip<int, gsl::span<int>::iterator>;
-  using Xc_pt = Zip<gsl::span<double>::iterator, gsl::span<int>::iterator>;
+  using Xd_pt = ProxyTrip<int, int*>;
+  using Xc_pt = Zip< double*, int*>;
   virtual Xd_pt Xd_begin() = 0;
   virtual Xd_pt Xd_end() = 0;
   virtual Xc_pt Xc_begin() = 0;
@@ -200,16 +176,20 @@ class	DataAnnotationParser : public AnnotationParser{
   int kd; // number of discrete covariate
   std::vector<std::string> dvar_name_vec;
   std::vector<std::string> cvar_name_vec;
-  gsl::span<int> row_d;
-  gsl::span<int> col_d;
-  gsl::span<int> row_c;
-  gsl::span<int> col_c;
-  gsl::span<double> data_c;
+  Eigen::Map<Eigen::ArrayXi> row_d;
+  Eigen::Map<Eigen::ArrayXi> col_d;
+  Eigen::Map<Eigen::ArrayXi> row_c;
+  Eigen::Map<Eigen::ArrayXi> col_c;
+  Eigen::Map<Eigen::ArrayXd> data_c;
 public:
-  DataAnnotationParser(const size_t p_):
-    p(p_){
+  DataAnnotationParser(const size_t p_):row_d(nullptr,0),
+                                        col_d(nullptr,0),
+                                        row_c(nullptr,0),
+                                        col_c(nullptr,0),
+                                        data_c(nullptr,0),
+                                        p(p_){
   }
-  void load_d(const gsl::span<int> row,const gsl::span<int> col,std::vector<std::string> names){
+  void load_d(const Eigen::Map<Eigen::ArrayXi> row,const Eigen::Map<Eigen::ArrayXi> col,std::vector<std::string> names){
     dvar_name_vec = names;
     kd=names.size();
     const size_t anno_p = row.size();
@@ -219,7 +199,7 @@ public:
     row_d = row;
     col_d = col;
   }
-  void load_c(gsl::span<int> row,gsl::span<int> col,gsl::span<double> data,std::vector<std::string> names){
+  void load_c(Eigen::Map<Eigen::ArrayXi> row,Eigen::Map<Eigen::ArrayXi> col,Eigen::Map<Eigen::ArrayXd> data,std::vector<std::string> names){
     cvar_name_vec = names;
     kc=names.size();
     const size_t anno_p = row.size();
@@ -237,19 +217,23 @@ public:
     return cvar_name_vec;
   }
   Xd_pt Xd_begin() {
-    Xd_pt ret(row_d.begin(), col_d.begin());
+    using namespace std;
+    Xd_pt ret(begin(row_d), begin(col_d));
     return (ret);
   }
   Xd_pt Xd_end() {
-    Xd_pt ret(row_d.end(), col_d.end());
+    using namespace std;
+    Xd_pt ret(end(row_d), end(col_d));
     return (ret);
   }
   Xc_pt Xc_begin(){
-    Xc_pt ret(row_c.begin(),col_c.begin(),data_c.begin());
+    using namespace std;
+    Xc_pt ret(begin(row_c),begin(col_c),begin(data_c));
     return(ret);
   }
   Xc_pt Xc_end(){
-    Xc_pt ret(row_c.end(),col_c.end(),data_c.end());
+    using namespace std;
+    Xc_pt ret(end(row_c),end(col_c),end(data_c));
     return(ret);
   }
   int	num_discrete() const{
@@ -269,14 +253,15 @@ class FileAnnotationParser : public AnnotationParser{
   std::vector<double> data_c;
   std::vector<std::string> cvar_name_vec;
   std::vector<std::string> dvar_name_vec;
-  gsl::span<int> rows_d;
-  gsl::span<int> cols_d;
+  Eigen::Map<Eigen::ArrayXi> rows_d;
+  Eigen::Map<Eigen::ArrayXi> cols_d;
   std::string snp;
 public:
   FileAnnotationParser(const std::map<std::string,int> &snp_hash,const char* annot_file):
     p(snp_hash.size()),
     kc(0),
-    kd(0){
+    kd(0),rows_d(nullptr,0),
+    cols_d(nullptr,0){
     std::ifstream afile(annot_file, std::ios_base::in | std::ios_base::binary);
     boost::iostreams::filtering_istream inf;
     std::string line;
@@ -352,30 +337,29 @@ public:
           }
         }
       }
-      rows_d=gsl::span<int>(row_d);
-      cols_d=gsl::span<int>(col_d);
-
+      rows_d=Eigen::Map<Eigen::ArrayXi>(row_d.data(),row_d.size());
+      cols_d=Eigen::Map<Eigen::ArrayXi>(col_d.data(),col_d.size());
   }
   Xd_pt Xd_begin(){
-    Xd_pt r(rows_d.begin(),cols_d.begin());
+    Xd_pt r(begin(rows_d),begin(cols_d));
     return(r);
   }
   Xc_pt Xc_begin(){
-    gsl::span<int> rows(row_c);
-    gsl::span<int> cols(col_c);
-    gsl::span<double> datas(data_c);
-    Xc_pt r(rows.begin(),cols.begin(),datas.begin());
+    Eigen::Map<Eigen::ArrayXi> rows(row_c.data(),row_c.size());
+    Eigen::Map<Eigen::ArrayXi> cols(col_c.data(),col_c.size());
+    Eigen::Map<Eigen::ArrayXd> datas(data_c.data(),data_c.size());
+    Xc_pt r(begin(rows),begin(cols),begin(datas));
     return(r);
   }
   Xd_pt Xd_end(){
-    Xd_pt r(rows_d.end(),cols_d.end());
+    Xd_pt r(end(rows_d),end(cols_d));
     return(r);
   }
   Xc_pt Xc_end(){
-    gsl::span<int> rows(row_c);
-    gsl::span<int> cols(col_c);
-    gsl::span<double> datas(data_c);
-    Xc_pt r(rows.end(),cols.end(),datas.end());
+    Eigen::Map<Eigen::ArrayXi> rows(row_c.data(),row_c.size());
+    Eigen::Map<Eigen::ArrayXi> cols(col_c.data(),col_c.size());
+    Eigen::Map<Eigen::ArrayXd> datas(data_c.data(),data_c.size());
+    Xc_pt r(end(rows),end(cols),end(datas));
     return(r);
   }
   int	num_discrete() const{
@@ -402,9 +386,9 @@ public:
 
 
 class DataZscoreParser : public ZscoreParser {
-  gsl::span<std::string> SNP;
-  gsl::span<std::string> locus;
-  gsl::span<double> z;
+  std::vector<std::string> SNP;
+  std::vector<std::string> locus;
+  Eigen::Map<Eigen::ArrayXd> z;
   linetype_i line_tupi;
   linetype_s line_tups;
   const size_t p;
@@ -412,8 +396,8 @@ class DataZscoreParser : public ZscoreParser {
   std::unordered_set<std::string> loc_map;
 
 public:
-  DataZscoreParser(gsl::span<std::string> SNP_, gsl::span<std::string> locus_,
-                   gsl::span<double> z_)
+  DataZscoreParser(std::vector<std::string> SNP_, std::vector<std::string> locus_,
+                   Eigen::Map<Eigen::ArrayXd> z_)
     : SNP(SNP_), locus(locus_), z(z_),p(SNP.size()),i(0) {}
 
   linetype_s *getline_s() {
