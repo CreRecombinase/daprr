@@ -23,6 +23,6 @@ AC_SUBST(GSL_CFLAGS)
 AC_SUBST(GSL_LIBS)
 ##AC_SUBST(RCPP_LDFLAGS)
 
-make -C inst/dap-master/torus_src
+CXXFLAGS=`"${R_HOME}/bin/R" CMD config CXXFLAGS` CXX=`"${R_HOME}/bin/R" CMD config CXX` make -C inst/dap-master/torus_src
 
 AC_OUTPUT(src/Makevars)

@@ -1726,7 +1726,7 @@ fi
 
 ##AC_SUBST(RCPP_LDFLAGS)
 
-make -C inst/dap-master/torus_src
+CXXFLAGS=`"${R_HOME}/bin/R" CMD config CXXFLAGS` CXX=`"${R_HOME}/bin/R" CMD config CXX` make -C inst/dap-master/torus_src
 
 ac_config_files="$ac_config_files src/Makevars"
 
