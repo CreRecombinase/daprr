@@ -8,7 +8,7 @@ using namespace Rcpp;
 
 // elastic_donut
 Rcpp::List elastic_donut(Rcpp::IntegerVector locus, Rcpp::NumericVector z, Rcpp::NumericMatrix X, double EM_thresh, const double alpha, Rcpp::NumericVector lambda, const double prior_init);
-RcppExport SEXP _daprcpptest_elastic_donut(SEXP locusSEXP, SEXP zSEXP, SEXP XSEXP, SEXP EM_threshSEXP, SEXP alphaSEXP, SEXP lambdaSEXP, SEXP prior_initSEXP) {
+RcppExport SEXP _daprcpp_elastic_donut(SEXP locusSEXP, SEXP zSEXP, SEXP XSEXP, SEXP EM_threshSEXP, SEXP alphaSEXP, SEXP lambdaSEXP, SEXP prior_initSEXP) {
 BEGIN_RCPP
     Rcpp::RObject rcpp_result_gen;
     Rcpp::RNGScope rcpp_rngScope_gen;
@@ -25,7 +25,7 @@ END_RCPP
 }
 // elastic_donut_sp
 Rcpp::List elastic_donut_sp(Rcpp::IntegerVector locus, Rcpp::NumericVector z, Rcpp::S4 X, double EM_thresh, const double alpha, Rcpp::NumericVector lambda, const double prior_init);
-RcppExport SEXP _daprcpptest_elastic_donut_sp(SEXP locusSEXP, SEXP zSEXP, SEXP XSEXP, SEXP EM_threshSEXP, SEXP alphaSEXP, SEXP lambdaSEXP, SEXP prior_initSEXP) {
+RcppExport SEXP _daprcpp_elastic_donut_sp(SEXP locusSEXP, SEXP zSEXP, SEXP XSEXP, SEXP EM_threshSEXP, SEXP alphaSEXP, SEXP lambdaSEXP, SEXP prior_initSEXP) {
 BEGIN_RCPP
     Rcpp::RObject rcpp_result_gen;
     Rcpp::RNGScope rcpp_rngScope_gen;
@@ -42,7 +42,7 @@ END_RCPP
 }
 // zhat2BF
 Rcpp::NumericVector zhat2BF(Rcpp::NumericVector z_hat);
-RcppExport SEXP _daprcpptest_zhat2BF(SEXP z_hatSEXP) {
+RcppExport SEXP _daprcpp_zhat2BF(SEXP z_hatSEXP) {
 BEGIN_RCPP
     Rcpp::RObject rcpp_result_gen;
     Rcpp::RNGScope rcpp_rngScope_gen;
@@ -53,7 +53,7 @@ END_RCPP
 }
 // new_splitter
 Rcpp::IntegerVector new_splitter(Rcpp::IntegerVector locus_id);
-RcppExport SEXP _daprcpptest_new_splitter(SEXP locus_idSEXP) {
+RcppExport SEXP _daprcpp_new_splitter(SEXP locus_idSEXP) {
 BEGIN_RCPP
     Rcpp::RObject rcpp_result_gen;
     Rcpp::RNGScope rcpp_rngScope_gen;
@@ -64,7 +64,7 @@ END_RCPP
 }
 // Esteps
 Rcpp::NumericVector Esteps(Rcpp::NumericVector BF, Rcpp::NumericVector prior, Rcpp::IntegerVector rle);
-RcppExport SEXP _daprcpptest_Esteps(SEXP BFSEXP, SEXP priorSEXP, SEXP rleSEXP) {
+RcppExport SEXP _daprcpp_Esteps(SEXP BFSEXP, SEXP priorSEXP, SEXP rleSEXP) {
 BEGIN_RCPP
     Rcpp::RObject rcpp_result_gen;
     Rcpp::RNGScope rcpp_rngScope_gen;
@@ -79,16 +79,16 @@ END_RCPP
 RcppExport SEXP run_testthat_tests();
 
 static const R_CallMethodDef CallEntries[] = {
-    {"_daprcpptest_elastic_donut", (DL_FUNC) &_daprcpptest_elastic_donut, 7},
-    {"_daprcpptest_elastic_donut_sp", (DL_FUNC) &_daprcpptest_elastic_donut_sp, 7},
-    {"_daprcpptest_zhat2BF", (DL_FUNC) &_daprcpptest_zhat2BF, 1},
-    {"_daprcpptest_new_splitter", (DL_FUNC) &_daprcpptest_new_splitter, 1},
-    {"_daprcpptest_Esteps", (DL_FUNC) &_daprcpptest_Esteps, 3},
+    {"_daprcpp_elastic_donut", (DL_FUNC) &_daprcpp_elastic_donut, 7},
+    {"_daprcpp_elastic_donut_sp", (DL_FUNC) &_daprcpp_elastic_donut_sp, 7},
+    {"_daprcpp_zhat2BF", (DL_FUNC) &_daprcpp_zhat2BF, 1},
+    {"_daprcpp_new_splitter", (DL_FUNC) &_daprcpp_new_splitter, 1},
+    {"_daprcpp_Esteps", (DL_FUNC) &_daprcpp_Esteps, 3},
     {"run_testthat_tests", (DL_FUNC) &run_testthat_tests, 0},
     {NULL, NULL, 0}
 };
 
-RcppExport void R_init_daprcpptest(DllInfo *dll) {
+RcppExport void R_init_daprcpp(DllInfo *dll) {
     R_registerRoutines(dll, NULL, CallEntries, NULL, NULL);
     R_useDynamicSymbols(dll, FALSE);
 }

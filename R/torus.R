@@ -37,23 +37,23 @@ torus_glmnet <- function(X,z,region_id,nfolds=10,alpha=0.95,lambda=NULL,EM_thres
             snpnum==length(region_id))
   
   prior <- rep(prior_init,snpnum)
-  BF <- daprcpptest:::zhat2BF(z)
-  splt <- daprcpptest:::new_splitter(as.integer(factor(gw_df$region_id)))
+  BF <- daprcpp:::zhat2BF(z)
+  splt <- daprcpp:::new_splitter(as.integer(factor(gw_df$region_id)))
   old_lik <- -9999
   new_lik <- 0
   it <- 1
   while(abs(new_lik-old_lik)>EM_thresh){
-    ES_o <- daprcpptest:::Esteps(BF,prior,splt)
+    ES_o <- daprcpp:::Esteps(BF,prior,splt)
     new_lik <- attr(ES_o,"lik")
     ym <- cbind(1-ES_o,ES_o)
     mg <- glmnet::cv.glmnet(x = X,y=ym,family="binomial",alpha=alpha,lambda=lambda,foldid = folds,...)
     a_prior <- map(mg$lambda,
                    ~c(glmnet::predict.cv.glmnet(object = mg,newx = X,type="response",s=.x))
                    )
-    a_ES <- map(a_prior,~daprcpptest:::Esteps(BF,.x,splt))
+    a_ES <- map(a_prior,~daprcpp:::Esteps(BF,.x,splt))
     a_lik <- map_dbl(a_ES,~attr(.x,"lik"))
     prior <- c(glmnet::predict.cv.glmnet(object = mg,newx = X,type="response",s="lambda.min"))
-    ES <- daprcpptest:::Esteps(BF,prior,splt)
+    ES <- daprcpp:::Esteps(BF,prior,splt)
     old_lik <- new_lik
     new_lik <- attr(ES,"lik")
     stopifnot(new_lik>old_lik)
@@ -70,7 +70,7 @@ torus_glmnet <- function(X,z,region_id,nfolds=10,alpha=0.95,lambda=NULL,EM_thres
 
 fps <- function(betav,X,BF,splt){
   prior <- 1/(1+exp(-c(as.matrix(betav[1]+X%*%betav[-1]))))
-  ES_o <- daprcpptest:::Esteps(BF,prior,splt)
+  ES_o <- daprcpp:::Esteps(BF,prior,splt)
   ym <- cbind(1-ES_o,ES_o)
   mg <- glmnet::cv.glmnet(x = X,
                           y=ym,
@@ -318,6 +318,42 @@ forward_select_fun <- function(f,params,combo_fun,extract_terms,steps=1L,ret_all
     return(best_fit) 
   }
 }
+
+
+
+#' Title
+#'
+#' @param gf
+#' @param af
+#'
+#' @return
+#' @export
+#'
+#' @examples
+torus_fdr <- function(gf,af){
+  torus_path <- system.file("dap-master/torus_src/torus",package = "daprcpp")
+  stopifnot(file.exists(torus_path),torus_path!="")
+  stopifnot(file.exists(gf),
+            file.exists(af))
+  fo <- fs::file_info(torus_path)
+  stopifnot((fo$permissions & "u+x") == "u+x")
+  qtl_file <- fs::file_temp()
+  res_args <- c(
+    "-d",
+    fs::path_expand(gf),
+    "-annot",
+    fs::path_expand(af),
+    "--load_zval",
+    "-qtl",
+    qtl_file
+  )
+  res <- processx::run(torus_path,args = res_args,echo_cmd = TRUE,echo = TRUE)
+  fdr_res <- readr::read_tsv(qtl_file,col_names = c("rej","region_id","fdr","decision"))
+  fs::file_delete(qtl_file)
+  return(fdr_res)
+}
+
+
 
 
 fs_torus <- function(gwas_df,full_anno_df,steps=1L,p_cutoff=1,torus_p=character(0)){

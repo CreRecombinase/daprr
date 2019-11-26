@@ -12,7 +12,7 @@
 #'
 #' @export
 elastic_donut <- function(locus, z, X, EM_thresh = 0.05, alpha = 0, lambda = as.numeric( c(0)), prior_init = 1e-3) {
-    .Call(`_daprcpptest_elastic_donut`, locus, z, X, EM_thresh, alpha, lambda, prior_init)
+    .Call(`_daprcpp_elastic_donut`, locus, z, X, EM_thresh, alpha, lambda, prior_init)
 }
 
 #' Estimate torus model using elasticnet
@@ -26,21 +26,21 @@ elastic_donut <- function(locus, z, X, EM_thresh = 0.05, alpha = 0, lambda = as.
 #'
 #' @export
 elastic_donut_sp <- function(locus, z, X, EM_thresh = 0.05, alpha = 0, lambda = as.numeric( c(0)), prior_init = 1e-3) {
-    .Call(`_daprcpptest_elastic_donut_sp`, locus, z, X, EM_thresh, alpha, lambda, prior_init)
+    .Call(`_daprcpp_elastic_donut_sp`, locus, z, X, EM_thresh, alpha, lambda, prior_init)
 }
 
 #' @export
 zhat2BF <- function(z_hat) {
-    .Call(`_daprcpptest_zhat2BF`, z_hat)
+    .Call(`_daprcpp_zhat2BF`, z_hat)
 }
 
 #' @export
 new_splitter <- function(locus_id) {
-    .Call(`_daprcpptest_new_splitter`, locus_id)
+    .Call(`_daprcpp_new_splitter`, locus_id)
 }
 
 #' @export
 Esteps <- function(BF, prior, rle) {
-    .Call(`_daprcpptest_Esteps`, BF, prior, rle)
+    .Call(`_daprcpp_Esteps`, BF, prior, rle)
 }
 

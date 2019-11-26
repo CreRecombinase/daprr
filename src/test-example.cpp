@@ -29,8 +29,8 @@
 // associated context should be wrapped in braced.
 
 Rcpp::Function system_file("system.file");
-const std::string gwas_file = Rcpp::as<std::string>(system_file("gwas_z_t.txt.gz",Rcpp::Named("package")="daprcpptest"));
-const std::string annotation_file = Rcpp::as<std::string>(system_file("gwas_anno_t.txt.gz",Rcpp::Named("package")="daprcpptest"));
+const std::string gwas_file = Rcpp::as<std::string>(system_file("gwas_z_t.txt.gz",Rcpp::Named("package")="daprcpp"));
+const std::string annotation_file = Rcpp::as<std::string>(system_file("gwas_anno_t.txt.gz",Rcpp::Named("package")="daprcpp"));
 
 
 template<typename T,int Row=Eigen::Dynamic,int Col=Eigen::Dynamic>
