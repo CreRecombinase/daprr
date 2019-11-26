@@ -140,7 +140,17 @@ gen_torus_cmd <- function(gf,af,torus_p=character(0)){
   return(res_args)
 }
 
+##' Run torus with torus-formatted data
+##'
+##'
+##'
+##' @param gf gwas summary stats file
+##' @param af annotation file
+##' @param torus_p regions at which to estimate priors
+##' @return a torus result object
+##' @author
 run_torus_cmd <- function(gf,af,torus_p=character(0)){
+
   torus_path <- system.file("dap-master/torus_src/torus",package = "daprcpp")
   stopifnot(file.exists(torus_path),torus_path!="")
   fo <- fs::file_info(torus_path)
@@ -321,12 +331,12 @@ forward_select_fun <- function(f,params,combo_fun,extract_terms,steps=1L,ret_all
 
 
 
-#' Title
+#' Get locus-level FDR from torus
 #'
-#' @param gf
-#' @param af
+#' @param gf gwas summary statistics
+#' @param af annotation file
 #'
-#' @return
+#' @return torus result object
 #' @export
 #'
 #' @examples
