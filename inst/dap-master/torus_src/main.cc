@@ -23,13 +23,13 @@ int main(int argc, char **argv){
   //olist.push_back(0.1);
   //phlist.push_back(0.05);
 
-  char data_file[256];
-  char gmap_file[256];
-  char smap_file[256];
-  char annot_file[256];
-  char prior_dir[256];
-  char lik_file[256];
-  char output_pip[256];
+  std::string data_file;
+  std::string gmap_file;
+  std::string smap_file;
+  std::string annot_file;
+  std::string prior_dir;
+  std::string lik_file;
+  std::string output_pip;
 
   int csize = -1;
   int gsize = -1;
@@ -40,11 +40,11 @@ int main(int argc, char **argv){
 
 
 
-  memset(data_file,0,256);
 
 
-  char init_file[256];
 
+  std::string init_file;
+  std::string qtl_file;
 
   int find_egene = 0;
   int est = 0;
@@ -52,16 +52,7 @@ int main(int argc, char **argv){
 
   double init_pi1 = 1e-3;
 
-  char ci_file[256];
-  memset(ci_file,0,256);
-  memset(lik_file,0,256);
-  memset(data_file,0,256); 
-  memset(gmap_file,0,256);
-  memset(smap_file,0,256);
-  memset(annot_file,0,256);
-  memset(init_file,0,256);
-  memset(prior_dir,0,256);
-  memset(output_pip,0,256);
+  std::string ci_file;
 
   int force_logistic = 0;
   int prob_annot = 0;
@@ -76,31 +67,31 @@ int main(int argc, char **argv){
   for(int i=1;i<argc;i++){
     
     if(strcmp(argv[i], "-d")==0 || strcmp(argv[i], "-data")==0){
-      strcpy(data_file,argv[++i]);
+      data_file=argv[++i];
       continue;
     }
 
     if(strcmp(argv[i], "-lik")==0){
-      strcpy(lik_file,argv[++i]);
+      lik_file=argv[++i];
       continue;
     }
 
 
 
     if(strcmp(argv[i], "-gmap")==0){
-      strcpy(gmap_file,argv[++i]);
+      gmap_file=argv[++i];
       continue;
     }
 
     
     if(strcmp(argv[i], "-smap")==0 ){
-      strcpy(smap_file,argv[++i]);
+      smap_file=argv[++i];
       continue;
     }
 
 
     if(strcmp(argv[i], "-annot")==0 ){
-      strcpy(annot_file,argv[++i]);
+      annot_file=argv[++i];
       continue;
     }
     
@@ -181,17 +172,18 @@ int main(int argc, char **argv){
     
     
     if(strcmp(argv[i], "-egene")==0 || strcmp(argv[i], "-qtl")==0 ){
+      qtl_file=argv[++i];
       find_egene = 1;
       continue;
     }
 
     if(strcmp(argv[i], "-dump_prior")==0){
-      strcpy(prior_dir, argv[++i]);
+      prior_dir=argv[++i];
       continue;
     }
 
     if(strcmp(argv[i], "-dump_pip")==0){
-      strcpy(output_pip, argv[++i]);
+      output_pip=argv[++i];
       continue;
     }
 
@@ -223,7 +215,7 @@ int main(int argc, char **argv){
 
 
   // checking mandatory arguments
-  if(strlen(data_file)==0){
+if(strlen(data_file.c_str())==0){
     fprintf(stderr,"Error: data file unspecified\n");
     show_banner();
     exit(0);
@@ -262,27 +254,27 @@ int main(int argc, char **argv){
 
   switch(data_format){
   case 1:
-    con.load_data(data_file);
+    con.load_data(data_file.c_str());
     break;
   case 2:
-    con.load_data_BF(data_file);
+    con.load_data_BF(data_file.c_str());
     break;
   case 3:
-    con.load_data_zscore(data_file);
+    con.load_data_zscore(data_file.c_str());
     break;
   case 4:
     con.fastqtl_use_dtss = fastqtl_use_dtss;
-    con.load_data_fastqtl(data_file);
+    con.load_data_fastqtl(data_file.c_str());
     gmap_file[0]=smap_file[0] = 0;
     break;
   default:
-    con.load_data(data_file);
+    con.load_data(data_file.c_str());
     break;
   }
    
 
-  con.load_map(gmap_file, smap_file);  
-  con.load_annotation(annot_file);
+  con.load_map(gmap_file.c_str(), smap_file.c_str());  
+  con.load_annotation(annot_file.c_str());
   fprintf(stderr,"Initializing ... \n");
 
   if(est==0 && find_egene==0){
@@ -293,17 +285,17 @@ int main(int argc, char **argv){
   if(est)
     con.estimate();
   if(find_egene){
-    con.find_eGene(alpha);
+    con.find_eGene(qtl_file.c_str(),alpha);
   }
-  if(strlen(prior_dir)>0){
-    con.dump_prior(prior_dir);
+  if(prior_dir.size()){
+    con.dump_prior(prior_dir.c_str());
   }
-  if(strlen(output_pip)>0){
-    fprintf(stderr,"#-dump_pip output_pip file: %s \n",output_pip);
-    con.dump_pip(output_pip);
+  if(output_pip.size()>0){
+    fprintf(stderr,"#-dump_pip output_pip file: %s \n",output_pip.c_str());
+con.dump_pip(output_pip.c_str());
   }
 
-  if(strlen(lik_file)>0){
+if(lik_file.size()>0){
     std::string filename = lik_file;
     std::ofstream ostrm(filename);
     ostrm << con.final_log10_lik<<std::endl;

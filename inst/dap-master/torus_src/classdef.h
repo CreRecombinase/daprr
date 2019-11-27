@@ -141,14 +141,14 @@ class controller {
   int print_avg;
 
 
-  void load_data(char *filename);    // load data with MatrixeQTL format -- default
-  void load_data_zscore(char *filename); // load data with z-score/t-score
-  void load_data_BF(char *filename); // load data with pre-computed log10 Bayes factors
-  void load_data_fastqtl(char *filename); //load data with fastQTL format
+  void load_data(const char* filename);    // load data with MatrixeQTL format -- default
+  void load_data_zscore(const char* filename); // load data with z-score/t-score
+  void load_data_BF(const char* filename); // load data with pre-computed log10 Bayes factors
+  void load_data_fastqtl(const char* filename); //load data with fastQTL format
 
 
-  void load_map(char *gene_map_file, char *snp_map_file);
-  void load_annotation(char *annot_file);
+  void load_map(const char* gene_map_file, const char* snp_map_file);
+  void load_annotation(const char* annot_file);
   int count_factor_level(int col);
   
   void simple_regression();
@@ -166,10 +166,10 @@ class controller {
   void run_EM();
 
   
-  void find_eGene(double thresh=0.05);
+  void find_eGene(const char*,double thresh=0.05);
   void estimate();
-  void dump_prior(char *path);
-  void dump_pip(char *file);
+  void dump_prior(const char* path);
+  void dump_pip(const char* file);
 
 
  private:

@@ -18,7 +18,7 @@
 namespace torus {
   using namespace std;
 
-void controller::load_data(char *filename){
+void controller::load_data(const char* filename){
 
   
 
@@ -113,7 +113,7 @@ void controller::load_data(char *filename){
 
 
 
-void controller::load_data_fastqtl(char *filename){
+void controller::load_data_fastqtl(const char* filename){
   
   // fastQTL file contains dtss info, automatically parse and use dtss in analysis
   
@@ -260,7 +260,7 @@ void controller::load_data_fastqtl(char *filename){
 
 
 
-void controller::load_data_zscore(char *filename){
+void controller::load_data_zscore(const char* filename){
 
   
   
@@ -358,7 +358,7 @@ void controller::load_data_zscore(char *filename){
 
 // this function directly loads pre-computed log10 Bayes factors
 
-void controller::load_data_BF(char *filename){
+void controller::load_data_BF(const char* filename){
 
   
 
@@ -454,7 +454,7 @@ void controller::load_data_BF(char *filename){
 
 
 
-void controller::load_map(char* gene_file, char *snp_file){
+void controller::load_map(const char*  gene_file, const char*  snp_file){
   
   if(fastqtl_use_dtss)
     return;
@@ -566,7 +566,7 @@ void controller::load_map(char* gene_file, char *snp_file){
 
 
 
-void controller::load_annotation(char* annot_file){
+void controller::load_annotation(const char* annot_file){
 
  
   std::map<string, std::vector<double> > annot_map;
@@ -1034,8 +1034,10 @@ void controller::single_ct_regression(){
 // option 1: find egene
 
 
-void controller::find_eGene(double fdr_thresh){
+  void controller::find_eGene(const char *qtl_file,double fdr_thresh){
 
+    std::string filename = qtl_file;
+    std::ofstream ostrm(filename);
   if(!finish_em){
     run_EM();
     finish_em = 1;
@@ -1056,13 +1058,13 @@ void controller::find_eGene(double fdr_thresh){
     if(cpr/rej > fdr_thresh){
       rej_decision = 0;
     }
-    printf("%5d  %20s    %9.3e    %d\n",int(rej), locVec[i].id.c_str(), locVec[i].fdr,rej_decision);
+    ostrm<<int(rej)<<"\t"<<locVec[i].id.c_str()<<"\t"<<locVec[i].fdr<<"\t"<<rej_decision<<"\n";
     rej++;
     if(rej_decision == 1){
       rej_count++;
     }
   }
-  
+      ostrm<<std::endl;
   fprintf(stderr,"\n\n    Total Loci: %d   Rejections: %d\n", int(locVec.size()), rej_count); 
   
 }
@@ -1234,7 +1236,7 @@ void controller::estimate(){
 
 
 
-void controller::dump_prior(char *prior_path){
+void controller::dump_prior(const char* prior_path){
 
   if(!finish_em){
     run_EM();
@@ -1262,7 +1264,7 @@ void controller::dump_prior(char *prior_path){
 }
 
 
-void controller::dump_pip(char *file){
+void controller::dump_pip(const char* file){
   if(!finish_em){
     run_EM();
     finish_em = 1;
