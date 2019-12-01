@@ -1,6 +1,6 @@
 GSLV := $(shell pkg-config --libs gsl)
 GSLI := $(shell pkg-config --cflags gsl)
-BOOSTL := $(echo $LIBRARY_PATH | tr ':' '\n' | grep 'boost')
+BOOSTL := $(echo $(LIBRARY_PATH) | tr ':' '\n' | grep 'boost')
 BOOSTI := $(echo $CPATH | tr ':' '\n' | grep 'boost')
 
 main: main.o controller.o logistic.o
