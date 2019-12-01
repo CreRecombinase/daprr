@@ -1,10 +1,10 @@
 GSLV := $(shell pkg-config --libs gsl)
 GSLI := $(shell pkg-config --cflags gsl)
-BOOSTL := $(echo $(LIBRARY_PATH) | tr ':' '\n' | grep 'boost')
-BOOSTI := $(echo $CPATH | tr ':' '\n' | grep 'boost')
+BOOSTL := -L$(shell echo "${LIBRARY_PATH}" | tr ':' '\n' | grep 'boost')
+BOOSTI := -I$(shell echo "${CPATH}" | tr ':' '\n' | grep 'boost')
 
 main: main.o controller.o logistic.o
-	$(CXX)  $(CXXFLAGS)  $(GSLI) $(BOOSTI) -g main.o controller.o logistic.o  -lm $(GSLV) $(BOOSTL) -lboost_iostreams -lz  -o torus
+	$(CXX)  $(CXXFLAGS)  -g main.o controller.o logistic.o  -lm $(GSLV) $(BOOSTL) -lboost_iostreams -lz  -o torus
 static: main.o controller.o logistic.o
 	$(CXX)  $(CXXFLAGS) $(GSLI) $(BOOSTI) -g main.o controller.o logistic.o  -lm $(GSLV) $(BOOSTL) -lboost_iostreams -lz -static -o torus.static
 main.o: main.cc 
