@@ -197,7 +197,7 @@ run_torus_cmd <- function(gf,af,torus_p=character(0)){
     prior_l <- map(torus_p,function(x){
       fp <- as.character(fs::path(torus_d,x,ext="prior"))
       suppressMessages(
-        ret <- vroom::vroom(file = fp,delim = "  ",trim_ws = T,col_names = c("SNP","prior"),col_types = cols("SNP"="i","prior"="d")) %>% mutate(region_id=x)
+        ret <- vroom::vroom(file = fp,delim = "  ",trim_ws = T,col_names = c("SNP","prior"),col_types = cols("SNP"="c","prior"="d")) %>% mutate(region_id=x)
       )
       return(ret)
     })
