@@ -97,8 +97,8 @@ parse_torus_s <- function(s,lik) {
     df <- dplyr::mutate(df,term=stringr::str_replace(term,pattern = "\\.[0-9]+$",replacement = ""),
                         sd=(low-estimate)/(-1.96),z=estimate/sd,p=pnorm(abs(z),lower.tail = FALSE))
     # lik <- scan(lik_file,what=numeric())
-    # file.remove(lik_file)
-    df <- tidyr::nest(df) %>% dplyr::mutate(lik=lik)
+    # file.remove(lik_file)mutate
+    df <- tidyr::nest(df,data = tidyr::everything()) %>% dplyr::mutate(lik=lik)
 }
 
 write_gwas <- function(gwas_df,gf=tempfile(fileext=".txt.gz")){
@@ -191,7 +191,7 @@ run_torus_cmd <- function(gf,af,torus_p=character(0)){
                       sd=(low-estimate)/(-1.96),z=estimate/sd,p=pnorm(abs(z),lower.tail = FALSE))
   lik <- scan(lik_file,what=numeric())
   file.remove(lik_file)
-  df <- tidyr::nest(df) %>% mutate(lik=lik)
+  df <- tidyr::nest(df,data = tidyr::everything()) %>% dplyr::mutate(lik=lik)
   if(length(torus_p)>0){
     stopifnot(all(fs::file_exists(p_f)))
     prior_l <- map(torus_p,function(x){
@@ -202,6 +202,7 @@ run_torus_cmd <- function(gf,af,torus_p=character(0)){
       return(ret)
     })
     fs::file_delete(p_f)
+
     names(prior_l) <- torus_p
     return(list(df=df,priors=prior_l))
   }else{
@@ -252,7 +253,7 @@ test_torus_cmd <- function(gf,af,torus_p=character(0)){
                       sd=(low-estimate)/(-1.96),z=estimate/sd,p=pnorm(abs(z),lower.tail = FALSE))
   lik <- scan(lik_file,what=numeric())
   file.remove(lik_file)
-  df <- tidyr::nest(df) %>% dplyr::mutate(lik=lik)
+  df <- tidyr::nest(df,data = tidyr::everything()) %>% dplyr::mutate(lik=lik)
   if(length(torus_p)>0){
     stopifnot(all(fs::file_exists(p_f)))
     prior_l <- map(torus_p,function(x){
