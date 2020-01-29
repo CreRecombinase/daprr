@@ -29,6 +29,7 @@ int main(int argc, char **argv){
   char annot_file[256];
   char prior_dir[256];
   char lik_file[256];
+  char qtl_file[256];
   char output_pip[256];
 
   int csize = -1;
@@ -55,6 +56,7 @@ int main(int argc, char **argv){
   char ci_file[256];
   memset(ci_file,0,256);
   memset(lik_file,0,256);
+  memset(qtl_file,0,256);
   memset(data_file,0,256); 
   memset(gmap_file,0,256);
   memset(smap_file,0,256);
@@ -178,9 +180,9 @@ int main(int argc, char **argv){
       est = 1;
       continue;
     }
-    
-    
+
     if(strcmp(argv[i], "-egene")==0 || strcmp(argv[i], "-qtl")==0 ){
+      strcpy(qtl_file, argv[++i]);
       find_egene = 1;
       continue;
     }
@@ -293,7 +295,7 @@ int main(int argc, char **argv){
   if(est)
     con.estimate();
   if(find_egene){
-    con.find_eGene(alpha);
+    con.find_eGene(qtl_file,alpha);
   }
   if(strlen(prior_dir)>0){
     con.dump_prior(prior_dir);

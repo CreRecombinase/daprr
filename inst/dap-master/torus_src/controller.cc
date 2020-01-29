@@ -1034,38 +1034,41 @@ void controller::single_ct_regression(){
 // option 1: find egene
 
 
-void controller::find_eGene(double fdr_thresh){
+  void controller::find_eGene(const char* qtl_file,double fdr_thresh){
 
-  if(!finish_em){
-    run_EM();
-    finish_em = 1;
-  }
-  
-  for(int i=0;i<locVec.size();i++){
-    locVec[i].compute_fdr();
-  }
-  
-  std::sort(locVec.begin(), locVec.end(),rank_by_fdr);
-  
-  double rej = 1.0;
-  double cpr = 0.0;
-  int rej_decision = 1;
-  int rej_count = 0;
-  for(int i=0;i<locVec.size();i++){
-    cpr += locVec[i].fdr;
-    if(cpr/rej > fdr_thresh){
-      rej_decision = 0;
+    std::string filename = qtl_file;
+    std::ofstream ostrm(filename);
+    if(!finish_em){
+      run_EM();
+      finish_em = 1;
     }
-    printf("%5d  %20s    %9.3e    %d\n",int(rej), locVec[i].id.c_str(), locVec[i].fdr,rej_decision);
+  
+    for(int i=0;i<locVec.size();i++){
+      locVec[i].compute_fdr();
+    }
+  
+    std::sort(locVec.begin(), locVec.end(),rank_by_fdr);
+
+    double rej = 1.0;
+    double cpr = 0.0;
+    int rej_decision = 1;
+    int rej_count = 0;
+    for(int i=0;i<locVec.size();i++){
+      cpr += locVec[i].fdr;
+      if(cpr/rej > fdr_thresh){
+	rej_decision = 0;
+      }
+      ostrm<<int(rej)<<"\t"<<locVec[i].id.c_str()<<"\t"<<locVec[i].fdr<<"\t"<<rej_decision<<"\n";
+      //      printf("%5d  %20s    %9.3e    %d\n",, , ,);
     rej++;
     if(rej_decision == 1){
       rej_count++;
     }
   }
+    ostrm<<std::endl;
+    fprintf(stderr,"\n\n    Total Loci: %d   Rejections: %d\n", int(locVec.size()), rej_count);
   
-  fprintf(stderr,"\n\n    Total Loci: %d   Rejections: %d\n", int(locVec.size()), rej_count); 
-  
-}
+  }
 
 
 // option 2: parameter estimation

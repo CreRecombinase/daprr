@@ -23,6 +23,10 @@ write_anno <- function(anno_df=tibble(SNP=integer(),feature=character()),p=max(m
 }
 
 
+                        
+                           
+
+
 #' Title
 #'
 #' @param gwas_df 
@@ -39,6 +43,10 @@ write_gwas <- function(gwas_df,gf=tempfile(fileext=".txt.gz")){
 }
 
 
+
+
+
+
 #' Title
 #'
 #' @param gf 
@@ -51,9 +59,11 @@ write_gwas <- function(gwas_df,gf=tempfile(fileext=".txt.gz")){
 #' @importFrom Rcpp sourceCpp
 #'
 #' @examples
-run_torus_cmd <- function(gf,af,torus_p=character(0)){
+run_torus_cmd <- function(gf,af,torus_p=character(0),l1=NA_real_,l2=NA_real_){
   torus_path <- system.file("dap-master/torus_src/torus",package = "daprcpp")
   stopifnot(file.exists(torus_path),torus_path!="")
+  stopifnot(file.exists(gf),
+            file.exists(af))
   fo <- fs::file_info(torus_path)
   stopifnot((fo$permissions & "u+x") == "u+x")
   torus_d <- fs::file_temp()
@@ -82,6 +92,12 @@ run_torus_cmd <- function(gf,af,torus_p=character(0)){
       lik_file
     )
   }
+  if(!is.na(l1)){
+    res_args <- c(res_args,"-l1_lambda",l1)
+  }
+  if(!is.na(l2)){
+    res_args <- c(res_args,"-l2_lambda",l2)
+  }
   res <- processx::run(torus_path,args = res_args,echo_cmd = TRUE,echo = TRUE)
   df <- read.table(file = textConnection(res$stdout),skip=1,header=F,stringsAsFactors = F)
   colnames(df) <- c("term", "estimate", "low", "high")
@@ -92,24 +108,57 @@ run_torus_cmd <- function(gf,af,torus_p=character(0)){
   file.remove(lik_file)
   df <- tidyr::nest(df) %>% dplyr::mutate(lik=lik)
   if(length(torus_p)>0){
-    stopifnot(all(fs::file_exists(p_f)))
-    prior_l <- purrr::map(torus_p,function(x){
-      fp <- as.character(fs::path(torus_d,x,ext="prior"))
-      suppressMessages(
-        ret <- vroom::vroom(file = fp,delim = "  ",trim_ws = T,col_names = c("SNP","prior"),col_types = cols("SNP"="i","prior"="d")) %>% dplyr::mutate(region_id=x)
-      )
-      return(ret)
-    })
-    fs::file_delete(p_f)
-    names(prior_l) <- torus_p
-    return(list(df=df,priors=prior_l))
+      stopifnot(all(fs::file_exists(p_f)))
+      prior_l <- purrr::map(torus_p,function(x){
+          fp <- as.character(fs::path(torus_d,x,ext="prior"))
+          suppressMessages(
+              ret <- vroom::vroom(file = fp,delim = "  ",trim_ws = T,col_names = c("SNP","prior"),col_types = cols("SNP"="i","prior"="d")) %>% dplyr::mutate(region_id=x)
+          )
+          return(ret)
+      })
+      fs::file_delete(p_f)
+      names(prior_l) <- torus_p
+      ret <- list(df=df,priors=prior_l)
   }else{
-    return(list(df=df))
+      ret <- list(df=df)
   }
+  return(ret)
 }
 
 
 
+
+#' Title
+#'
+#' @param gf 
+#' @param af 
+#'
+#' @return
+#' @export
+#'
+#' @examples
+torus_fdr <- function(gf,af){
+  torus_path <- system.file("dap-master/torus_src/torus",package = "daprcpp")
+  stopifnot(file.exists(torus_path),torus_path!="")
+  stopifnot(file.exists(gf),
+            file.exists(af))
+  fo <- fs::file_info(torus_path)
+  stopifnot((fo$permissions & "u+x") == "u+x")
+  qtl_file <- fs::file_temp()
+  res_args <- c(
+    "-d",
+    fs::path_expand(gf),
+    "-annot",
+    fs::path_expand(af),
+    "--load_zval",
+    "-qtl",
+    qtl_file
+  )
+  res <- processx::run(torus_path,args = res_args,echo_cmd = TRUE,echo = TRUE)
+  fdr_res <- readr::read_tsv(qtl_file,col_names = c("rej","region_id","fdr","decision"))
+  fs::file_delete(qtl_file)
+  return(fdr_res)  
+}
 
 
 #' Title
@@ -126,6 +175,9 @@ coef.torus <- function(fit){
   names(retvec) <- ret$term
   return(retvec)
 }
+
+
+
 
 
 
@@ -147,11 +199,14 @@ coef.torus <- function(fit){
 #' @export
 #'
 #' @examples
-forward_select_fun <- function(f,params,combo_fun,extract_terms,steps=1L,ret_all=FALSE){
+forward_select_fun <- function(f,params,combo_fun,extract_terms,steps=1L,parallel=parallel,init_params=character()){
   
-  rest_terms <- params
-  term_selection <- as.list(rest_terms)
-  all_results <- list()
+
+  best_terms <- init_params
+  rest_terms <- params[!params %in% best_terms]
+
+  term_selection <- purrr::map(rest_terms,~c(.x,best_terms))
+#  all_results <- list()
   
   db_fun <- function(ts){
     init_d <- combo_fun(ts)
@@ -159,8 +214,12 @@ forward_select_fun <- function(f,params,combo_fun,extract_terms,steps=1L,ret_all
   }
   
   for(i in seq_len(steps)){
-    all_fit <- furrr::future_map(term_selection,db_fun)
-    all_results[[i]] <- all_fit
+    if(parallel){
+      all_fit <- furrr::future_map(term_selection,db_fun)
+    }else{
+      all_fit <- purrr::map(term_selection,db_fun)
+    }
+    #    all_results[[i]] <- all_fit
     lik_vec <- map_dbl(all_fit,~.x$df$lik)
     if(length(lik_vec)==0){
       break
@@ -171,11 +230,11 @@ forward_select_fun <- function(f,params,combo_fun,extract_terms,steps=1L,ret_all
     rest_terms <- rest_terms[! rest_terms %in% best_terms]
     term_selection <- purrr::map(rest_terms,~c(.x,best_terms))
   }
-  if(ret_all){
-    return (all_results)
-  }else{
+  # if(ret_all){
+  #   return (all_results)
+  # }else{
     return(best_fit) 
-  }
+#  }
 }
 
 
@@ -191,10 +250,11 @@ forward_select_fun <- function(f,params,combo_fun,extract_terms,steps=1L,ret_all
 #' @export
 #'
 #' @examples
-fs_torus <- function(gf,p,full_anno_df,steps=1L,p_cutoff=1,torus_p=character(0)){
+fs_torus <- function(gf,p,full_anno_df,steps=1L,p_cutoff=1,torus_p=character(0),parallel=FALSE,init_terms=character()){
   
   params <- unique(full_anno_df$feature)
   torus_f <- purrr::partial(run_torus_cmd,gf=gf)
+  stopifnot(all(init_terms %in% full_anno_df$feature))
   
   combo_fun <- function(params){
     write_anno(anno_df = dplyr::filter(full_anno_df,feature %in% params),p = p)  
@@ -203,7 +263,7 @@ fs_torus <- function(gf,p,full_anno_df,steps=1L,p_cutoff=1,torus_p=character(0))
     nc <- names(coef.torus(x))
     return(nc[nc!="Intercept"])
   }
-  all_ret <- forward_select_fun(f = torus_f,params=params,combo_fun = combo_fun,extract_terms = et_fun,steps = steps)
+  all_ret <- forward_select_fun(f = torus_f,params=params,combo_fun = combo_fun,extract_terms = et_fun,steps = steps,parallel=parallel,init_params = init_terms)
   
   final_terms <- unnest(all_ret$df) %>% 
     filter(term!="Intercept",p<p_cutoff) %>% pull(term)
