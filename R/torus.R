@@ -55,13 +55,11 @@ write_gwas <- function(gwas_df,gf=tempfile(fileext=".txt.gz")){
 #'
 #' @return
 #' @export
-#' @useDynLib daprcpp
-#' @importFrom Rcpp sourceCpp
 #'
 #' @examples
-run_torus_cmd <- function(gf,af,torus_p=character(0),l1=NA_real_,l2=NA_real_){
-  torus_path <- system.file("dap-master/torus_src/torus",package = "daprcpp")
-  stopifnot(file.exists(torus_path),torus_path!="")
+run_torus_cmd <- function(gf,af,torus_p=character(0),l1=NA_real_,l2=NA_real_,torus_path="torus"){
+
+
   stopifnot(file.exists(gf),
             file.exists(af))
   fo <- fs::file_info(torus_path)

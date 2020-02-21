@@ -1,8 +1,0 @@
-# set by configure
-CXX_STD = CXX11
-GSL_CFLAGS = @GSL_CFLAGS@
-GSL_LIBS   = @GSL_LIBS@
-
-# combine with standard arguments for R
-PKG_CPPFLAGS = -g $(GSL_CFLAGS) 
-PKG_LIBS = $(GSL_LIBS) -lboost_iostreams
